@@ -289,6 +289,10 @@ ip access-list extended GUEST_ACL
 exit
 
 ip access-list extended MGMT_ACL
+ ! Tillad DHCP-trafik (UDP 67/68) inbound på SVI, ellers blokerer ACL'en for DHCP-tildeling!
+ permit udp any any eq bootps
+ permit udp any any eq bootpc
+ ! Tillad SSH og HTTPS fra IT-VLAN 30 til Management SVI'er
  permit tcp 10.20.1.192 0.0.0.31 any eq 22
  permit tcp 10.20.1.192 0.0.0.31 any eq 443
  deny ip any any
@@ -496,6 +500,10 @@ ip access-list extended GUEST_ACL
 exit
 
 ip access-list extended MGMT_ACL
+ ! Tillad DHCP-trafik (UDP 67/68) inbound på SVI, ellers blokerer ACL'en for DHCP-tildeling!
+ permit udp any any eq bootps
+ permit udp any any eq bootpc
+ ! Tillad SSH og HTTPS fra IT-VLAN 30 til Management SVI'er
  permit tcp 10.20.1.192 0.0.0.31 any eq 22
  permit tcp 10.20.1.192 0.0.0.31 any eq 443
  deny ip any any

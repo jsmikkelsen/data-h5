@@ -8,7 +8,7 @@ Denne sektion dækker **Del 2 – IP-plan og VLSM** i opgavebeskrivelsen. Her ge
 
 Virksomheden har tildelt adresseområdet **`10.20.0.0/16`** (subnetmaske `255.255.0.0`), hvilket giver i alt 65.536 IP-adresser. 
 
-For at designe et professionelt og skalerbart netværk, tager vi udgangspunkt i det **forventede maksimale antal enheder** frem for de nuværende tal. Subnettene skal dimensioneres nøjagtigt ved brug af VLSM, så vi undgår spild, men samtidig har nok adresser til rådighed på hvert VLAN.
+For at designe et professionelt og skalerbart netværk, tager vi udgangspunkt i det **forventede maksimale antal enheder** frem for de nuværende tal. Subnettene skal dimensioneres nøjagtigt ved brug av VLSM, så vi undgår spild, men samtidig har nok adresser til rådighed på hvert VLAN.
 
 ### Behovsanalyse (Sorteret efter størrelse, største først):
 
@@ -80,8 +80,8 @@ Herunder ses den færdige IP-plan for virksomheden, som skal konfigureres i udst
 | **VLAN 10** | Administration | `10.20.1.128` | `255.255.255.192` (`/26`) | `10.20.1.129` | `10.20.1.190` | `10.20.1.191` | 62 |
 | **VLAN 30** | IT | `10.20.1.192` | `255.255.255.224` (`/27`) | `10.20.1.193` | `10.20.1.222` | `10.20.1.223` | 30 |
 | **VLAN 99** | Management | `10.20.1.224` | `255.255.255.240` (`/28`) | `10.20.1.225` | `10.20.1.238` | `10.20.1.239` | 14 |
-| *Transit A* | *core-01 to R1* | `10.20.254.0` | `255.255.255.252` (`/30`) | `10.20.254.1` (R1) | `10.20.254.2` (core-01) | `10.20.254.3` | 2 |
-| *Transit B* | *core-02 to R1* | `10.20.254.4` | `255.255.255.252` (`/30`) | `10.20.254.5` (R1) | `10.20.254.6` (core-02) | `10.20.254.7` | 2 |
+| *Transit A* | *core-1 to rt01* | `10.20.254.0` | `255.255.255.252` (`/30`) | `10.20.254.1` (rt01) | `10.20.254.2` (core-1) | `10.20.254.3` | 2 |
+| *Transit B* | *core-2 to rt01* | `10.20.254.4` | `255.255.255.252` (`/30`) | `10.20.254.5` (rt01) | `10.20.254.6` (core-2) | `10.20.254.7` | 2 |
 
 ---
 

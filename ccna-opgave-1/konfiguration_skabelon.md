@@ -1,6 +1,6 @@
 # Cisco IOS Konfigurationsskabelon (Fuld 9-Enheders Topologi Med OSPFv2)
 
-Dette dokument indeholder de komplette, kommenterede Cisco IOS-konfigurationsskabeloner, der passer **præcist** med din udrullede Packet Tracer-topologi (`opgave-1.pkt`) bestående af 9 netværksenheder (1 Edge Router, 2 L3 Cores, 2 L2 Distributionsswitche og 5 L2 Accessswitche) med **dynamisk OSPFv2 routing**.
+Dette dokument indeholder de komplette, kommenterede Cisco IOS-konfigurationsskabeloner, der passer **præcist** med din udrullede Packet Tracer-topologi (`opgave-1.pkt`) bestående af 9 netværksenheder (rt01, core-1, core-2, ds-1, ds-2 og as-1 til as-5) med **dynamisk OSPFv2 routing**.
 
 ---
 
@@ -8,35 +8,35 @@ Dette dokument indeholder de komplette, kommenterede Cisco IOS-konfigurationsska
 
 For at sikre, at konfigurationerne virker med det samme, skal du forbinde portene præcis som angivet herunder (og som ses i dit screenshot):
 
-* **`Router0` (R1 / Router):**
-  * `Gi0/0/0` <---> **`Multilayer Switch0` Gi1/0/24** (Transit Link A: `10.20.254.0/30`)
-  * `Gi0/0/1` <---> **`Multilayer Switch1` Gi1/0/24** (Transit Link B: `10.20.254.4/30`)
-* **Kerne / L3 Switche (`Multilayer Switch0` & `Multilayer Switch1`):**
-  * **Inter-Core Link (Trunk):** `Multilayer Switch0 [Gi1/0/23]` <---> `Multilayer Switch1 [Gi1/0/23]`
-  * **Uplink til ds-01 (EtherChannel Po11):** `Multilayer Switch0 [Gi1/0/1-2]` <---> `Multilayer Switch2 [Gi1/0/1-2]`
-  * **Uplink til ds-02 (EtherChannel Po12):** `Multilayer Switch1 [Gi1/0/1-2]` <---> `Multilayer Switch3 [Gi1/0/1-2]`
+* **`rt01` (Router):**
+  * `Gi0/0/0` <---> **`core-1` Gi1/0/24** (Transit Link A: `10.20.254.0/30`)
+  * `Gi0/0/1` <---> **`core-2` Gi1/0/24** (Transit Link B: `10.20.254.4/30`)
+* **Kerne / L3 Switche (`core-1` & `core-2`):**
+  * **Inter-Core Link (Trunk):** `core-1 [Gi1/0/23]` <---> `core-2 [Gi1/0/23]`
+  * **Uplink til ds-1 (EtherChannel Po11):** `core-1 [Gi1/0/1-2]` <---> `ds-1 [Gi1/0/1-2]`
+  * **Uplink til ds-2 (EtherChannel Po12):** `core-2 [Gi1/0/1-2]` <---> `ds-2 [Gi1/0/1-2]`
   * **Cross-Links (Trunks):**
-    * `Multilayer Switch0 [Gi1/0/22]` <---> `Multilayer Switch3 [Gi1/0/22]`
-    * `Multilayer Switch1 [Gi1/0/22]` <---> `Multilayer Switch2 [Gi1/0/22]`
-    * `Multilayer Switch0 [Gi1/0/21]` <---> `Multilayer Switch3 [Gi1/0/21]` (eller tilsvarende)
-* **Distribution / L2 Switche (`Multilayer Switch2` & `Multilayer Switch3`) til Access Switche (`Switch0` til `Switch4`):**
-  * Hver access-switch har redundante trunks til både `Multilayer Switch2` (venstre) og `Multilayer Switch3` (højre):
-    * **`Switch0` (Admin):** `Gi0/2` <---> `Multilayer Switch2 Gi1/0/3` | `Gi0/1` <---> `Multilayer Switch3 Gi1/0/3`
-    * **`Switch1` (Prod):**  `Gi0/1` <---> `Multilayer Switch2 Gi1/0/4` | `Gi0/2` <---> `Multilayer Switch3 Gi1/0/4`
-    * **`Switch2` (IT):**    `Gi0/2` <---> `Multilayer Switch2 Gi1/0/5` | `Gi0/1` <---> `Multilayer Switch3 Gi1/0/5`
-    * **`Switch3` (Guest):** `Gi0/1` <---> `Multilayer Switch2 Gi1/0/6` | `Gi0/2` <---> `Multilayer Switch3 Gi1/0/6`
-    * **`Switch4` (Mgmt):**  `Gi0/2` <---> `Multilayer Switch2 Gi1/0/7` | `Gi0/1` <---> `Multilayer Switch3 Gi1/0/7`
+    * `core-1 [Gi1/0/22]` <---> `ds-2 [Gi1/0/22]`
+    * `core-2 [Gi1/0/22]` <---> `ds-1 [Gi1/0/22]`
+    * `core-1 [Gi1/0/21]` <---> `ds-2 [Gi1/0/21]`
+* **Distribution / L2 Switche (`ds-1` & `ds-2`) til Access Switche (`as-1` til `as-5`):**
+  * Hver access-switch har redundante trunks til både `ds-1` (venstre) og `ds-2` (højre):
+    * **`as-1` (Admin):** `Gi0/2` <---> `ds-1 Gi1/0/3` | `Gi0/1` <---> `ds-2 Gi1/0/3`
+    * **`as-2` (Prod):**  `Gi0/1` <---> `ds-1 Gi1/0/4` | `Gi0/2` <---> `ds-2 Gi1/0/4`
+    * **`as-3` (IT):**    `Gi0/2` <---> `ds-1 Gi1/0/5` | `Gi0/1` <---> `ds-2 Gi1/0/5`
+    * **`as-4` (Guest):** `Gi0/1` <---> `ds-1 Gi1/0/6` | `Gi0/2` <---> `ds-2 Gi1/0/6`
+    * **`as-5` (Mgmt):**  `Gi0/2` <---> `ds-1 Gi1/0/7` | `Gi0/1` <---> `ds-2 Gi1/0/7`
 
 ---
 
-## 🌐 1. Kant-Router: `Router0` (Cisco ISR 4331)
+## 🌐 1. Kant-Router: `rt01` (Cisco ISR 4331)
 
 Ansvar: WAN-routing, NAT/PAT, og dynamisk udrulning af default route (`0.0.0.0/0`) via OSPF.
 
 ```ios
 enable
 configure terminal
-hostname Router0
+hostname rt01
 
 ! --- 1. WAN Interface (Internet Simulation) ---
 interface GigabitEthernet0/0/2
@@ -45,16 +45,16 @@ interface GigabitEthernet0/0/2
  ip nat outside
  no shutdown
 
-! --- 2. LAN Interface to Multilayer Switch0 ---
+! --- 2. LAN Interface to core-1 ---
 interface GigabitEthernet0/0/0
- description Transit-Link-To-MS0
+ description Transit-Link-To-CORE-1
  ip address 10.20.254.1 255.255.255.252
  ip nat inside
  no shutdown
 
-! --- 3. LAN Interface to Multilayer Switch1 ---
+! --- 3. LAN Interface to core-2 ---
 interface GigabitEthernet0/0/1
- description Transit-Link-To-MS1
+ description Transit-Link-To-CORE-2
  ip address 10.20.254.5 255.255.255.252
  ip nat inside
  no shutdown
@@ -92,14 +92,14 @@ write memory
 
 ---
 
-## 🧠 2. Core Switch Primary: `Multilayer Switch0` (Catalyst 3650 - L3)
+## 🧠 2. Core Switch Primary: `core-1` (Catalyst 3650 - L3)
 
 Ansvar: SVIs, HSRP Active (VLAN 10,20,30,99), STP Root Primary, **Primary DHCP (80% pulje)** og OSPFv2.
 
 ```ios
 enable
 configure terminal
-hostname Multilayer Switch0
+hostname core-1
 
 ! --- 1. Aktiver L3 Routing ---
 ip routing
@@ -125,44 +125,44 @@ spanning-tree vlan 10,20,30,99 root primary
 spanning-tree vlan 40 root secondary
 
 ! --- 4. EtherChannel (LACP) Konfigurationer ---
-! EtherChannel 11 (LACP) til Multilayer Switch2 (ds-01)
+! EtherChannel 11 (LACP) til ds-1
 interface range GigabitEthernet1/0/1-2
- description EtherChannel-Link-To-MS2
+ description EtherChannel-Link-To-DS-1
  switchport trunk encapsulation dot1q
  switchport mode trunk
  channel-group 11 mode active
 no shutdown
 
 interface Port-Channel 11
- description Logical-Trunk-To-MS2
+ description Logical-Trunk-To-DS-1
  switchport trunk encapsulation dot1q
  switchport mode trunk
 no shutdown
 
 ! --- 5. Fysiske Cross-Links & Routed Ports ---
-! Cross-link Trunk til Multilayer Switch1 (core-02)
+! Cross-link Trunk til core-2
 interface GigabitEthernet1/0/23
- description Trunk-To-MS1-CrossLink
+ description Trunk-To-CORE-2-CrossLink
  switchport trunk encapsulation dot1q
  switchport mode trunk
 no shutdown
 
-! Cross-link Trunk til Multilayer Switch3 (ds-02)
+! Cross-link Trunk til ds-2
 interface GigabitEthernet1/0/22
- description Trunk-To-MS3-CrossLink
+ description Trunk-To-DS-2-CrossLink
  switchport trunk encapsulation dot1q
  switchport mode trunk
 no shutdown
 
 interface GigabitEthernet1/0/21
- description Trunk-To-MS3-CrossLink-2
+ description Trunk-To-DS-2-CrossLink-2
  switchport trunk encapsulation dot1q
  switchport mode trunk
 no shutdown
 
-! Routed Port til Router0 (Transit Link A)
+! Routed Port til Router rt01 (Transit Link A)
 interface GigabitEthernet1/0/24
- description Routed-Link-To-Router0-Gi0/0/0
+ description Routed-Link-To-rt01-Gi0/0/0
  no switchport
  ip address 10.20.254.2 255.255.255.252
  no shutdown
@@ -176,7 +176,7 @@ router ospf 1
  no passive-interface GigabitEthernet1/0/24
  ! Reklamer transit-linket
  network 10.20.254.0 0.0.0.3 area 0
- ! Reklamer alle vores interne VLAN-områder (SVI-netværk) til Router0
+ ! Reklamer alle vores interne VLAN-områder (SVI-netværk) til rt01
  network 10.20.1.128 0.0.0.63 area 0
  network 10.20.1.0 0.0.0.127 area 0
  network 10.20.1.192 0.0.0.31 area 0
@@ -187,21 +187,21 @@ exit
 ! --- 7. Redundant Split-Scope DHCP (80% Pulje) ---
 ! VLAN 10 (Admin) Ekskluderinger
 ip dhcp excluded-address 10.20.1.129 10.20.1.134
-ip dhcp excluded-address 10.20.1.176 10.20.1.191  ! Ekskluderer MS1's 20% pulje
+ip dhcp excluded-address 10.20.1.176 10.20.1.191  ! Ekskluderer core-2's 20% pulje
 
 ! VLAN 20 (Prod) Ekskluderinger
 ip dhcp excluded-address 10.20.1.1 10.20.1.9
-ip dhcp excluded-address 10.20.1.100 10.20.1.127  ! Ekskluderer MS1's 20% pulje
+ip dhcp excluded-address 10.20.1.100 10.20.1.127  ! Ekskluderer core-2's 20% pulje
 
 ! VLAN 30 (IT) Ekskluderinger
 ip dhcp excluded-address 10.20.1.193 10.20.1.199
-ip dhcp excluded-address 10.20.1.216 10.20.1.223  ! Ekskluderer MS1's 20% pulje
+ip dhcp excluded-address 10.20.1.216 10.20.1.223  ! Ekskluderer core-2's 20% pulje
 
 ! VLAN 40 (Gæster) Ekskluderinger
 ip dhcp excluded-address 10.20.0.1 10.20.0.9
-ip dhcp excluded-address 10.20.0.200 10.20.0.254  ! Ekskluderer MS1's 20% pulje
+ip dhcp excluded-address 10.20.0.200 10.20.0.254  ! Ekskluderer core-2's 20% pulje
 
-! Opret DHCP Pools for Multilayer Switch0 (80% af IP-scopet)
+! Opret DHCP Pools for core-1 (80% af IP-scopet)
 ip dhcp pool VLAN10_Admin_Primary
  network 10.20.1.128 255.255.255.192
  default-router 10.20.1.129
@@ -301,14 +301,14 @@ write memory
 
 ---
 
-## 🧠 3. Core Switch Backup: `Multilayer Switch1` (Catalyst 3650 - L3)
+## 🧠 3. Core Switch Backup: `core-2` (Catalyst 3650 - L3)
 
 Ansvar: SVIs, HSRP Backup (VLAN 40 Active), STP Root Secondary, **Backup DHCP (20% pulje)** og OSPFv2.
 
 ```ios
 enable
 configure terminal
-hostname Multilayer Switch1
+hostname core-2
 
 ! --- 1. Aktiver L3 Routing ---
 ip routing
@@ -334,38 +334,38 @@ spanning-tree vlan 40 root primary
 spanning-tree vlan 10,20,30,99 root secondary
 
 ! --- 4. EtherChannel (LACP) Konfigurationer ---
-! EtherChannel 12 (LACP) til Multilayer Switch3 (ds-02)
+! EtherChannel 12 (LACP) til ds-2
 interface range GigabitEthernet1/0/1-2
- description EtherChannel-Link-To-MS3
+ description EtherChannel-Link-To-DS-2
  switchport trunk encapsulation dot1q
  switchport mode trunk
  channel-group 12 mode active
 no shutdown
 
 interface Port-Channel 12
- description Logical-Trunk-To-MS3
+ description Logical-Trunk-To-DS-2
  switchport trunk encapsulation dot1q
  switchport mode trunk
 no shutdown
 
 ! --- 5. Fysiske Cross-Links & Routed Ports ---
-! Cross-link Trunk til Multilayer Switch0 (core-01)
+! Cross-link Trunk til core-1
 interface GigabitEthernet1/0/23
- description Trunk-To-MS0-CrossLink
+ description Trunk-To-CORE-1-CrossLink
  switchport trunk encapsulation dot1q
  switchport mode trunk
 no shutdown
 
-! Cross-link Trunk til Multilayer Switch2 (ds-01)
+! Cross-link Trunk til ds-1
 interface GigabitEthernet1/0/22
- description Trunk-To-MS2-CrossLink
+ description Trunk-To-DS-1-CrossLink
  switchport trunk encapsulation dot1q
  switchport mode trunk
 no shutdown
 
-! Routed Port til Router0 (Transit Link B)
+! Routed Port til Router rt01 (Transit Link B)
 interface GigabitEthernet1/0/24
- description Routed-Link-To-Router0-Gi0/0/1
+ description Routed-Link-To-rt01-Gi0/0/1
  no switchport
  ip address 10.20.254.6 255.255.255.252
  no shutdown
@@ -379,7 +379,7 @@ router ospf 1
  no passive-interface GigabitEthernet1/0/24
  ! Reklamer transit-linket
  network 10.20.254.4 0.0.0.3 area 0
- ! Reklamer alle vores interne VLAN-områder (SVI-netværk) til Router0
+ ! Reklamer alle vores interne VLAN-områder (SVI-netværk) til rt01
  network 10.20.1.128 0.0.0.63 area 0
  network 10.20.1.0 0.0.0.127 area 0
  network 10.20.1.192 0.0.0.31 area 0
@@ -389,18 +389,18 @@ exit
 
 ! --- 7. Redundant Split-Scope DHCP (20% Pulje) ---
 ! VLAN 10 (Admin) Ekskluderinger
-ip dhcp excluded-address 10.20.1.129 10.20.1.175  ! Gateways, Switche & MS0's 80% pulje
+ip dhcp excluded-address 10.20.1.129 10.20.1.175  ! Gateways, Switche & core-1's 80% pulje
 
 ! VLAN 20 (Prod) Ekskluderinger
-ip dhcp excluded-address 10.20.1.1 10.20.1.99    ! Gateways, Switche & MS0's 80% pulje
+ip dhcp excluded-address 10.20.1.1 10.20.1.99    ! Gateways, Switche & core-1's 80% pulje
 
 ! VLAN 30 (IT) Ekskluderinger
-ip dhcp excluded-address 10.20.1.193 10.20.1.215  ! Gateways, Switche & MS0's 80% pulje
+ip dhcp excluded-address 10.20.1.193 10.20.1.215  ! Gateways, Switche & core-1's 80% pulje
 
 ! VLAN 40 (Gæster) Ekskluderinger
-ip dhcp excluded-address 10.20.0.1 10.20.0.199    ! Gateways, APs & MS0's 80% pulje
+ip dhcp excluded-address 10.20.0.1 10.20.0.199    ! Gateways, APs & core-1's 80% pulje
 
-! Opret DHCP Pools for Multilayer Switch1 (20% af IP-scopet - Backup)
+! Opret DHCP Pools for core-2 (20% af IP-scopet - Backup)
 ip dhcp pool VLAN10_Admin_Backup
  network 10.20.1.128 255.255.255.192
  default-router 10.20.1.129
@@ -464,7 +464,7 @@ interface vlan 99
  ip access-group MGMT_ACL in
 no shutdown
 
-! --- 9. Access Control Lists (ACLs) (Identiske med MS0) ---
+! --- 9. Access Control Lists (ACLs) (Identiske med core-1) ---
 ip access-list extended GUEST_ACL
  permit udp any any eq bootpc
  permit udp any any eq bootps
@@ -500,14 +500,14 @@ write memory
 
 ---
 
-## ⚙️ 4. Distribution Switch Left: `Multilayer Switch2` (Catalyst 3650 - L2)
+## ⚙️ 4. Distribution Switch Left: `ds-1` (Catalyst 3650 - L2)
 
-Ansvar: Aggregerer de redundante links fra alle access-switche og sender dem op til `Multilayer Switch0` via LACP.
+Ansvar: Aggregerer de redundante links fra alle access-switche og sender dem op til `core-1` via LACP.
 
 ```ios
 enable
 configure terminal
-hostname Multilayer Switch2
+hostname ds-1
 
 ! --- 1. Opret VLANs ---
 vlan 10
@@ -527,28 +527,28 @@ exit
 ! --- 2. Spanning Tree ---
 spanning-tree mode rapid-pvst
 
-! --- 3. EtherChannel Trunk til Multilayer Switch0 ---
+! --- 3. EtherChannel Trunk til core-1 ---
 interface range GigabitEthernet1/0/1-2
- description EtherChannel-Link-To-MS0
+ description EtherChannel-Link-To-CORE-1
  switchport trunk encapsulation dot1q
  switchport mode trunk
  channel-group 11 mode active
 no shutdown
 
 interface Port-Channel 11
- description Logical-Trunk-To-MS0
+ description Logical-Trunk-To-CORE-1
  switchport trunk encapsulation dot1q
  switchport mode trunk
 no shutdown
 
-! --- 4. Cross-Link Trunk til Multilayer Switch1 ---
+! --- 4. Cross-Link Trunk til core-2 ---
 interface GigabitEthernet1/0/22
- description Trunk-To-MS1-CrossLink
+ description Trunk-To-CORE-2-CrossLink
  switchport trunk encapsulation dot1q
  switchport mode trunk
 no shutdown
 
-! --- 5. Redundante Trunks til Access-switche (Switch0 til Switch4) ---
+! --- 5. Redundante Trunks til Access-switche (as-1 til as-5) ---
 interface range GigabitEthernet1/0/3 - 7
  description Redundant-Trunks-Down-To-Access-Layer
  switchport trunk encapsulation dot1q
@@ -586,14 +586,14 @@ write memory
 
 ---
 
-## ⚙️ 5. Distribution Switch Right: `Multilayer Switch3` (Catalyst 3650 - L2)
+## ⚙️ 5. Distribution Switch Right: `ds-2` (Catalyst 3650 - L2)
 
-Ansvar: Aggregerer de redundante links fra alle access-switche og sender dem op til `Multilayer Switch1` via LACP.
+Ansvar: Aggregerer de redundante links fra alle access-switche og sender dem op til `core-2` via LACP.
 
 ```ios
 enable
 configure terminal
-hostname Multilayer Switch3
+hostname ds-2
 
 ! --- 1. Opret VLANs ---
 vlan 10
@@ -613,34 +613,34 @@ exit
 ! --- 2. Spanning Tree ---
 spanning-tree mode rapid-pvst
 
-! --- 3. EtherChannel Trunk til Multilayer Switch1 ---
+! --- 3. EtherChannel Trunk til core-2 ---
 interface range GigabitEthernet1/0/1-2
- description EtherChannel-Link-To-MS1
+ description EtherChannel-Link-To-CORE-2
  switchport trunk encapsulation dot1q
  switchport mode trunk
  channel-group 12 mode active
 no shutdown
 
 interface Port-Channel 12
- description Logical-Trunk-To-MS1
+ description Logical-Trunk-To-CORE-2
  switchport trunk encapsulation dot1q
  switchport mode trunk
 no shutdown
 
-! --- 4. Cross-Link Trunk til Multilayer Switch0 ---
+! --- 4. Cross-Link Trunk til core-1 ---
 interface GigabitEthernet1/0/22
- description Trunk-To-MS0-CrossLink
+ description Trunk-To-CORE-1-CrossLink
  switchport trunk encapsulation dot1q
  switchport mode trunk
 no shutdown
 
 interface GigabitEthernet1/0/21
- description Trunk-To-MS0-CrossLink-2
+ description Trunk-To-CORE-1-CrossLink-2
  switchport trunk encapsulation dot1q
  switchport mode trunk
 no shutdown
 
-! --- 5. Redundante Trunks til Access-switche (Switch0 til Switch4) ---
+! --- 5. Redundante Trunks til Access-switche (as-1 til as-5) ---
 interface range GigabitEthernet1/0/3 - 7
  description Redundant-Trunks-Down-To-Access-Layer
  switchport trunk encapsulation dot1q
@@ -678,14 +678,14 @@ write memory
 
 ---
 
-## 🔌 6. Access Switch 1: `Switch0` (Catalyst 2960 - Administration)
+## 🔌 6. Access Switch 1: `as-1` (Catalyst 2960 - Administration)
 
 Ansvar: Tilslutning af administrations-arbejdspladser (VLAN 10). Port Security tillader op til 2 MAC-adresser for at understøtte kablede pc'er connected bag om IP-telefoner.
 
 ```ios
 enable
 configure terminal
-hostname Switch0
+hostname as-1
 
 ! --- 1. Opret VLANs ---
 vlan 10
@@ -699,7 +699,7 @@ exit
 ! --- 2. Spanning Tree Mode ---
 spanning-tree mode rapid-pvst
 
-! --- 3. Uplink Trunks til ds-01 & ds-02 ---
+! --- 3. Uplink Trunks til ds-1 & ds-2 ---
 interface range GigabitEthernet0/1 - 2
  description Redundant-Uplink-Trunks
  switchport mode trunk
@@ -750,14 +750,14 @@ write memory
 
 ---
 
-## 🔌 7. Access Switch 2: `Switch1` (Catalyst 2960 - Produktion)
+## 🔌 7. Access Switch 2: `as-2` (Catalyst 2960 - Produktion)
 
 Ansvar: Forbinder produktionen (VLAN 20). Port Security tillader strictly kun 1 MAC og lukker porten med det samme ved uautoriserede forsøg.
 
 ```ios
 enable
 configure terminal
-hostname Switch1
+hostname as-2
 
 ! --- 1. Opret VLANs ---
 vlan 20
@@ -771,7 +771,7 @@ exit
 ! --- 2. Spanning Tree Mode ---
 spanning-tree mode rapid-pvst
 
-! --- 3. Uplink Trunks til ds-01 & ds-02 ---
+! --- 3. Uplink Trunks til ds-1 & ds-2 ---
 interface range GigabitEthernet0/1 - 2
  description Redundant-Uplink-Trunks
  switchport mode trunk
@@ -822,14 +822,14 @@ write memory
 
 ---
 
-## 🔌 8. Access Switch 3: `Switch2` (Catalyst 2960 - IT-Afdeling)
+## 🔌 8. Access Switch 3: `as-3` (Catalyst 2960 - IT-Afdeling)
 
 Ansvar: Forbinder IT (VLAN 30). Port Security tillader op til 5 MACs for at lade it-folk teste udstyr uden besvær. Violation sat til restrict.
 
 ```ios
 enable
 configure terminal
-hostname Switch2
+hostname as-3
 
 ! --- 1. Opret VLANs ---
 vlan 30
@@ -843,7 +843,7 @@ exit
 ! --- 2. Spanning Tree Mode ---
 spanning-tree mode rapid-pvst
 
-! --- 3. Uplink Trunks til ds-01 & ds-02 ---
+! --- 3. Uplink Trunks til ds-1 & ds-2 ---
 interface range GigabitEthernet0/1 - 2
  description Redundant-Uplink-Trunks
  switchport mode trunk
@@ -893,14 +893,14 @@ write memory
 
 ---
 
-## 🔌 9. Access Switch 4: `Switch3` (Catalyst 2960 - Gæster & WAPs)
+## 🔌 9. Access Switch 4: `as-4` (Catalyst 2960 - Gæster & WAPs)
 
 Ansvar: Forbinder kablede gæsteborde og trådløse Access Points (VLAN 40). Port Security er deaktiveret på WAP-porte for ikke at blokere gæster.
 
 ```ios
 enable
 configure terminal
-hostname Switch3
+hostname as-4
 
 ! --- 1. Opret VLANs ---
 vlan 40
@@ -914,7 +914,7 @@ exit
 ! --- 2. Spanning Tree Mode ---
 spanning-tree mode rapid-pvst
 
-! --- 3. Uplink Trunks til ds-01 & ds-02 ---
+! --- 3. Uplink Trunks til ds-1 & ds-2 ---
 interface range GigabitEthernet0/1 - 2
  description Redundant-Uplink-Trunks
  switchport mode trunk
@@ -974,14 +974,14 @@ write memory
 
 ---
 
-## 🔌 10. Access Switch 5: `Switch4` (Catalyst 2960 - Management & Isolated)
+## 🔌 10. Access Switch 5: `as-5` (Catalyst 2960 - Management & Isolated)
 
 Ansvar: Placeret i serverrummet/IT-kontoret og tilsluttet i det sikrede Management-netværk (VLAN 99) for kablet console/lokal adgang, samt isolering.
 
 ```ios
 enable
 configure terminal
-hostname Switch4
+hostname as-5
 
 ! --- 1. Opret VLANs ---
 vlan 99
@@ -993,7 +993,7 @@ exit
 ! --- 2. Spanning Tree Mode ---
 spanning-tree mode rapid-pvst
 
-! --- 3. Uplink Trunks til ds-01 & ds-02 ---
+! --- 3. Uplink Trunks til ds-1 & ds-2 ---
 interface range GigabitEthernet0/1 - 2
  description Redundant-Uplink-Trunks
  switchport mode trunk

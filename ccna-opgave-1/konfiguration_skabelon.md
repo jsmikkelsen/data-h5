@@ -1,6 +1,6 @@
 # Cisco IOS Konfigurationsskabelon (Fuld 9-Enheders Topologi Med OSPFv2)
 
-Dette dokument indeholder de komplette, kommenterede Cisco IOS-konfigurationsskabeloner, der passer **præcist** med din udrullede Packet Tracer-topologi (`opgave-1.pkt`) bestående af 9 netværksenheder (rt01, core-1, core-2, ds-1, ds-2 og as-1 til as-5) med **dynamisk OSPFv2 routing**.
+Dette dokument indeholder de komplette, kommenterede Cisco IOS-konfigurationsskabeloner, der passer **præcist** med din udrullede Packet Tracer-topologi (`opgave-1.pkt`) bestående af 9 netværksenheder (rt01, core-1, core-2, ds-1, ds-2 og as-1 til as-5) med **dynamisk OSPFv2 routing** og fuld **redundant Split-Scope DHCP på alle VLANs (inklusive Management VLAN 99)**.
 
 ---
 
@@ -201,6 +201,11 @@ ip dhcp excluded-address 10.20.1.216 10.20.1.223  ! Ekskluderer core-2's 20% pul
 ip dhcp excluded-address 10.20.0.1 10.20.0.9
 ip dhcp excluded-address 10.20.0.200 10.20.0.254  ! Ekskluderer core-2's 20% pulje
 
+! VLAN 99 (Management) Ekskluderinger
+! (Ekskluderer den virtuelle gateway, switchenes statiske management IP'er (op til .234) samt backup IP'er)
+ip dhcp excluded-address 10.20.1.225 10.20.1.234
+ip dhcp excluded-address 10.20.1.238 10.20.1.239  ! Ekskluderer core-2's 20% pulje
+
 ! Opret DHCP Pools for core-1 (80% af IP-scopet)
 ip dhcp pool VLAN10_Admin_Primary
  network 10.20.1.128 255.255.255.192
@@ -220,6 +225,11 @@ ip dhcp pool VLAN30_IT_Primary
 ip dhcp pool VLAN40_Gaester_Primary
  network 10.20.0.0 255.255.255.0
  default-router 10.20.0.1
+ dns-server 10.20.1.195
+
+ip dhcp pool VLAN99_Mgmt_Primary
+ network 10.20.1.224 255.255.255.240
+ default-router 10.20.1.225
  dns-server 10.20.1.195
 
 ! --- 8. SVI Gateways & HSRP ---
@@ -400,6 +410,9 @@ ip dhcp excluded-address 10.20.1.193 10.20.1.215  ! Gateways, Switche & core-1's
 ! VLAN 40 (Gæster) Ekskluderinger
 ip dhcp excluded-address 10.20.0.1 10.20.0.199    ! Gateways, APs & core-1's 80% pulje
 
+! VLAN 99 (Management) Ekskluderinger
+ip dhcp excluded-address 10.20.1.225 10.20.1.237  ! Gateways, Switche & core-1's 80% pulje
+
 ! Opret DHCP Pools for core-2 (20% af IP-scopet - Backup)
 ip dhcp pool VLAN10_Admin_Backup
  network 10.20.1.128 255.255.255.192
@@ -419,6 +432,11 @@ ip dhcp pool VLAN30_IT_Backup
 ip dhcp pool VLAN40_Gaester_Backup
  network 10.20.0.0 255.255.255.0
  default-router 10.20.0.1
+ dns-server 10.20.1.196
+
+ip dhcp pool VLAN99_Mgmt_Backup
+ network 10.20.1.224 255.255.255.240
+ default-router 10.20.1.225
  dns-server 10.20.1.196
 
 ! --- 8. SVI Gateways & HSRP ---

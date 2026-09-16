@@ -1,7 +1,7 @@
 # Løsningsguide: Dag 2 – Fra konfiguration til packet flow
-## Troubleshooting og Repetitionsopgaven fra Helvede
+## Troubleshooting og Repetitionsopgaven fra Helvede (GNS3 vIOS-L3 udgave)
 
-Denne løsningsguide er udarbejdet til Hovedforløb 5 (H5) Datatekniker med speciale i Infrastruktur. Den dækker alle teoretiske og praktiske aspekter af laboratorieøvelsen beskrevet i præsentationen `Tshoot - Routering Basics.pptx`.
+Denne løsningsguide er udarbejdet til Hovedforløb 5 (H5) Datatekniker med speciale i Infrastruktur. Den dækker alle teoretiske og praktiske aspekter af laboratorieøvelsen beskrevet i præsentationen `Tshoot - Routering Basics.pptx`, tilpasset til **GNS3** med Cisco vIOS-L3 (`vios-adventerprisek9-m.spa.159-3.m6.qcow2`) med 2-tier interfaces (`gi0/0` til `gi0/3`).
 
 ---
 
@@ -22,24 +22,24 @@ Denne løsningsguide er udarbejdet til Hovedforløb 5 (H5) Datatekniker med spec
 
 Vi har valgt IP-området **`10.50.0.0/16`** som fundament. Planen understøtter både den lineære topologi (Del 1-3) og den udvidede, redundante topologi (Del 4 og frem).
 
-### IP-Adresseringstabel
+### IP-Adresseringstabel og GNS3 Interface Mapping
 
-| Segment / Link | Netværksadresse | Subnetmaske | R1 IP | R2 IP | R3 IP | R4 IP | Klient IP / Gateway |
+| Segment / Link | Netværksadresse | Subnetmaske | R1 Port | R2 Port | R3 Port | R4 Port | Klient IP / Gateway |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **LAN-A** (PC-A) | `10.50.10.0/24` | `255.255.255.0` | `10.50.10.1` | - | - | - | PC-A: `10.50.10.10` / GW: `10.50.10.1` |
-| **LAN-C** (PC-C) | `10.50.30.0/24` | `255.255.255.0` | - | - | `10.50.30.1` | - | PC-C: `10.50.30.10` / GW: `10.50.30.1` |
-| **LAN-D** (PC-D) | `10.50.40.0/24` | `255.255.255.0` | - | - | - | `10.50.40.1` | PC-D: `10.50.40.10` / GW: `10.50.40.1` |
-| **Link R1-R2** | `10.50.12.0/30` | `255.255.255.252`| `10.50.12.1` | `10.50.12.2` | - | - | Transit / Point-to-Point |
-| **Link R2-R3** | `10.50.23.0/30` | `255.255.255.252`| - | `10.50.23.1` | `10.50.23.2` | - | Transit / Point-to-Point |
-| **Link R3-R4** | `10.50.34.0/30` | `255.255.255.252`| - | - | `10.50.34.1` | `10.50.34.2` | Transit / Point-to-Point |
-| **Link R1-R3** *(Backup)*| `10.50.13.0/30` | `255.255.255.252`| `10.50.13.1` | - | `10.50.13.2` | - | Redundant Link |
-| **Link R2-R4** *(Backup)*| `10.50.24.0/30` | `255.255.255.252`| - | `10.50.24.1` | - | `10.50.24.2` | Redundant Link |
+| **LAN-A** (PC-A) | `10.50.10.0/24` | `255.255.255.0` | `gi0/0` | - | - | - | PC-A: `10.50.10.10` / GW: `10.50.10.1` |
+| **LAN-C** (PC-C) | `10.50.30.0/24` | `255.255.255.0` | - | - | `gi0/0` | - | PC-C: `10.50.30.10` / GW: `10.50.30.1` |
+| **LAN-D** (PC-D) | `10.50.40.0/24` | `255.255.255.0` | - | - | - | `gi0/0` | PC-D: `10.50.40.10` / GW: `10.50.40.1` |
+| **Link R1-R2** | `10.50.12.0/30` | `255.255.255.252`| `gi0/1` | `gi0/0` | - | - | Transit / Point-to-Point |
+| **Link R2-R3** | `10.50.23.0/30` | `255.255.255.252`| - | `gi0/1` | `gi0/1` | - | Transit / Point-to-Point |
+| **Link R3-R4** | `10.50.34.0/30` | `255.255.255.252`| - | - | `gi0/2` | `gi0/1` | Transit / Point-to-Point |
+| **Link R1-R3** *(Backup)*| `10.50.13.0/30` | `255.255.255.252`| `gi0/2` | - | `gi0/3` | - | Redundant Link |
+| **Link R2-R4** *(Backup)*| `10.50.24.0/30` | `255.255.255.252`| - | `gi0/2` | - | `gi0/2` | Redundant Link |
 
 ---
 
 ## 2. Cisco IOS Konfigurationsskabeloner (Del 1 & 2)
 
-Herunder er basisskabeloner til de fire routere, så interfaces sættes korrekt op.
+Herunder er basisskabeloner til de fire vIOS routere i GNS3 med forkortede port-navne (`gi0/0` osv.), lige til at copy-paste ind i din Putty/SecureCRT terminal.
 
 ### R1 (Router 1)
 ```ios
@@ -47,19 +47,18 @@ enable
 configure terminal
 hostname R1
 !
-interface GigabitEthernet0/0/0
+interface gi0/0
  ip address 10.50.10.1 255.255.255.0
  no shutdown
  description LAN-A
 !
-interface GigabitEthernet0/0/1
+interface gi0/1
  ip address 10.50.12.1 255.255.255.252
  no shutdown
  description Link-to-R2
 !
-interface GigabitEthernet0/0/2
+interface gi0/2
  ip address 10.50.13.1 255.255.255.252
- no shutdown
  shutdown
  description Redundant-Link-to-R3
 !
@@ -73,19 +72,18 @@ enable
 configure terminal
 hostname R2
 !
-interface GigabitEthernet0/0/0
+interface gi0/0
  ip address 10.50.12.2 255.255.255.252
  no shutdown
  description Link-to-R1
 !
-interface GigabitEthernet0/0/1
+interface gi0/1
  ip address 10.50.23.1 255.255.255.252
  no shutdown
  description Link-to-R3
 !
-interface GigabitEthernet0/0/2
+interface gi0/2
  ip address 10.50.24.1 255.255.255.252
- no shutdown
  shutdown
  description Redundant-Link-to-R4
 !
@@ -99,24 +97,23 @@ enable
 configure terminal
 hostname R3
 !
-interface GigabitEthernet0/0/0
+interface gi0/0
  ip address 10.50.30.1 255.255.255.0
  no shutdown
  description LAN-C
 !
-interface GigabitEthernet0/0/1
+interface gi0/1
  ip address 10.50.23.2 255.255.255.252
  no shutdown
  description Link-to-R2
 !
-interface GigabitEthernet0/0/2
+interface gi0/2
  ip address 10.50.34.1 255.255.255.252
  no shutdown
  description Link-to-R4
 !
-interface GigabitEthernet0/0/3
+interface gi0/3
  ip address 10.50.13.2 255.255.255.252
- no shutdown
  shutdown
  description Redundant-Link-to-R1
 !
@@ -130,19 +127,18 @@ enable
 configure terminal
 hostname R4
 !
-interface GigabitEthernet0/0/0
+interface gi0/0
  ip address 10.50.40.1 255.255.255.0
  no shutdown
  description LAN-D
 !
-interface GigabitEthernet0/0/1
+interface gi0/1
  ip address 10.50.34.2 255.255.255.252
  no shutdown
  description Link-to-R3
 !
-interface GigabitEthernet0/0/2
+interface gi0/2
  ip address 10.50.24.2 255.255.255.252
- no shutdown
  shutdown
  description Redundant-Link-to-R2
 !
@@ -178,7 +174,7 @@ Når alle ovenstående interfaces er konfigureret og oppe (`up/up`), men inden d
     *   PC-A indser, at pakken skal sendes til en anden lokation. Den sender den derfor til sin configured **Default Gateway** (`10.50.10.1` - R1).
     *   PC-A foretager et ARP-opslag efter MAC-adressen på `10.50.10.1`, pakker IP-pakken ind i en Ethernet-frame med R1's LAN-interface som destinations-MAC, og sender den afsted på mediet.
 *   **Hvilken enhed modtager pakken først?**
-    *   **R1** modtager framen på sit LAN-interface.
+    *   **R1** modtager framen på sit LAN-interface (`gi0/0`).
 *   **Hvad gør denne enhed med destinationens IP-adresse?**
     *   R1 fjerner Ethernet-headeren (Layer 2) for at kigge på IP-pakken (Layer 3). Den læser destinations-IP'en (`10.50.40.10`) og foretager et opslag i sin routingtabel (RIB).
 *   **Hvor langt kommer pakken, og hvorfor stopper den?**
@@ -201,7 +197,7 @@ R1(config)# ip route 10.50.40.0 255.255.255.0 10.50.12.2
 *   **Hvad betyder `<R2-NEXT-HOP>` (`10.50.12.2`)?**
     *   Det fortæller R1, at pakker mod `10.50.40.0/24` fysisk skal skubbes videre til R2 på IP'en `10.50.12.2`.
 *   **Hvordan ved R1, hvordan den når dette next hop?**
-    *   R1 slår `10.50.12.2` op og ser, at denne adresse hører under det direkte forbundne netværk `10.50.12.0/30` på interfacet `GigabitEthernet0/0/1`. Den ved derfor præcis, hvilket fysisk kabel pakken skal sendes ud af.
+    *   R1 slår `10.50.12.2` op og ser, at denne adresse hører under det direkte forbundne netværk `10.50.12.0/30` på interfacet `gi0/1`. Den ved derfor præcis, hvilket fysisk kabel pakken skal sendes ud af.
 *   **Hvor langt kommer pakken nu?**
     *   Pakken når nu frem til **R2**. Men her stoppes den, da R2 mangler en rute til `10.50.40.0/24`.
 
@@ -215,7 +211,7 @@ R2(config)# ip route 10.50.40.0 255.255.255.0 10.50.23.2
 ! På R3:
 R3(config)# ip route 10.50.40.0 255.255.255.0 10.50.34.2
 ```
-*(R4 behøver ingen rute frem, da LAN-D er direkte forbundet).*
+*(R4 behøver ingen rute frem, da LAN-D er direkte forbundet via connected).*
 
 ---
 
@@ -258,11 +254,11 @@ Control Plane (RIB) står for politikkerne og intelligensen; den finder ud af, h
 
 Dette afsnit beskæftiger sig med den udvidede topologi, hvor der findes to veje:
 ```
-       R2 (via link 10.50.12.2)
+       R2 (via link 10.50.12.2 på gi0/0)
      /    \
 R1         R4 (LAN-D: 10.50.40.0/24)
      \    /
-       R3 (via link 10.50.13.2)
+       R3 (via link 10.50.13.2 på gi0/3)
 ```
 
 Vi konfigurerer to ruter på R1 med forskellige prefix-længder:
@@ -278,7 +274,7 @@ Når R1 skal sende en pakke til `10.50.40.10`:
 3.  **Hvilken rute vælges?** Ruten mod **R3** (`10.50.40.0/24`) vælges.
 4.  **Hvorfor?** På grund af **Longest Prefix Match (LPM)**. En router vælger altid ruten med flest matchende netværksbits (det mest specifikke subnet-prefix / længste prefix). Da `/24` er mere specifikt end `/16`, vinder denne rute altid.
 
-> **Vigtig regel:** LPM (Longest Prefix Match) evalueres **altid** før Administrative Distance (AD). AD er kun relevant, hvis der er to ruter med nøjagtig samme prefix-længde (fx to `/24` ruter), der konkurrerer om at blive installeret i routingtabellen.
+> **Vigtig regel:** LPM (Longest Prefix Match) evalueres **altid** før Administrative Distance (AD). AD is kun relevant, hvis der er to ruter med nøjagtig samme prefix-længde (fx to `/24` ruter), der konkurrerer om at blive installeret i routingtabellen.
 
 ---
 
@@ -349,7 +345,7 @@ R1(config)# ip route 10.50.40.0 255.255.255.0 10.50.23.2
 Da `10.50.23.2` ikke findes på et netværk, som R1 direkte har et kabel i, vil routeren køre følgende rekursive proces for at videresende en pakke:
 1.  Slå destinationen `10.50.40.10` op -> Matcher den statiske rute mod `10.50.23.2`.
 2.  Slå `10.50.23.2` op i routingtabellen -> Finder ud af, at for at nå `10.50.23.0/30` skal pakken sendes til `10.50.12.2` (R2).
-3.  Slå `10.50.12.2` op -> Matcher det direkte forbundne netværk på interfacet `GigabitEthernet0/0/1`.
+3.  Slå `10.50.12.2` op -> Matcher det direkte forbundne netværk på interfacet `gi0/1`.
 4.  Pakken kan nu sendes ud af det fysiske interface mod R2.
 
 ---

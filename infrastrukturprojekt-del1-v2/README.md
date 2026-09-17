@@ -38,6 +38,10 @@ Dokumentationen er opdelt i præcise, faglige moduler, der følger standarderne 
    * Komplet verifikationsmatrix til systematisk test af platformen.
    * Specifikke tests for L2 STP, HSRP gateway failover, VRF-isolering, route-leaking funktionalitet, firewall-politikker og administrationsovervågning.
 
+5. **[Fysisk Kablingsplan (`kablings_plan.md`)](./kablings_plan.md)**
+   * Komplet kablingsplan dækkende alle forbindelser mellem Dell R630, FortiGates, L3/L2 switche og WAN-routeren.
+   * Fysisk tjekliste og farvekodningsguide til rackopsætning i labbet.
+
 ---
 
 ## 🛠️ Overordnet Systemarkitektur

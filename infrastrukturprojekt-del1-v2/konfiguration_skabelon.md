@@ -309,10 +309,10 @@ ip route vrf VRF_BRAVO 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
 ip route vrf VRF_CHARLIE 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
 ip route vrf VRF_DELTA 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
 !
-ip route 192.168.10.0 255.255.255.0 VLAN10 vrf VRF_ALFA
-ip route 192.168.20.0 255.255.255.0 VLAN20 vrf VRF_BRAVO
-ip route 192.168.30.0 255.255.255.0 VLAN30 vrf VRF_CHARLIE
-ip route 192.168.40.0 255.255.255.0 VLAN40 vrf VRF_DELTA
+ip route 192.168.10.0 255.255.255.0 Vlan10 vrf VRF_ALFA
+ip route 192.168.20.0 255.255.255.0 Vlan20 vrf VRF_BRAVO
+ip route 192.168.30.0 255.255.255.0 Vlan30 vrf VRF_CHARLIE
+ip route 192.168.40.0 255.255.255.0 Vlan40 vrf VRF_DELTA
 !
 ip route 0.0.0.0 0.0.0.0 192.168.101.1
 ```
@@ -553,9 +553,9 @@ end
 
 ## 5. wan-rt01 (Cisco ISR 4331 - Fuldstændig WAN/NAT Router med L2 Bridging)
 
-Denne router agerer som din **fysiske internet gateway/ISP simulator**. Den er kablet **direkte** til WAN1-porten på begge dine firewalls via `Gi0/0/0` og `Gi0/0/2`. De to porte er software-bridged på routeren via **Bridge Domain (BDI1)**, så den aktive firewall kan overtage den delte WAN VIP `192.168.200.1` øjeblikkeligt.
+Denne router agerer som din **fysiske internet gateway/ISP simulator**. Den er kablet **direkte** til WAN1-porten på begge dine firewalls via de to hosliggende porte **`Gi0/0/0`** og **`Gi0/0/1`**. De to porte er software-bridged på routeren via **Bridge Domain (BDI1)**, så den aktive firewall kan overtage den delte WAN VIP `192.168.200.1` øjeblikkeligt.
 
-Routeren modtager kortsigtet eksternt internet på `Gi0/0/1` (via DHCP) og udfører NAT for hele dit interne `192.168.0.0/16` netværk.
+Den selvstændige port **`Gi0/0/2`** forbindes til dit rigtige internet (via DHCP) og udfører NAT (PAT Overload) for hele dit interne `192.168.0.0/16` netværk.
 
 ```cisco
 ! --- SYSTEM ---
@@ -581,8 +581,8 @@ ip routing
 !
 ! --- WAN INTERFACES & LAYER 2 BRIDGING (BDI) ---
 !
-! GigabitEthernet0/0/1 forbindes til skolens/labbets rigtige internet (router/væg-stik)
-interface GigabitEthernet0/0/1
+! GigabitEthernet0/0/2 forbindes til skolens/labbets rigtige internet (router/væg-stik)
+interface GigabitEthernet0/0/2
  description Uplink mod rigtigt internet (Fysisk uplink mod skole/hjemme-LAN)
  ip address dhcp                ! Modtager automatisk en IP-adresse og default route fra dit LAN
  ip nat outside                 ! Definerer dette som det ydre NAT interface
@@ -598,8 +598,8 @@ interface GigabitEthernet0/0/0
   bridge-domain 1
  no shutdown
 !
-! GigabitEthernet0/0/2 forbindes DIREKTE til fg-ha-02 wan1 port
-interface GigabitEthernet0/0/2
+! GigabitEthernet0/0/1 forbindes DIREKTE til fg-ha-02 wan1 port
+interface GigabitEthernet0/0/1
  description Direkte WAN-forbindelse til fg-ha-02 wan1 port
  no ip address
  negotiation auto
@@ -626,11 +626,11 @@ interface Loopback0
 ip access-list standard NAT_ACL
  permit 192.168.0.0 0.0.255.255
 !
-! Etabler dynamisk NAT (PAT Overload) ud af din internet-forbundne port
-ip nat inside source list NAT_ACL interface GigabitEthernet0/0/1 overload
+! Etabler dynamisk NAT (PAT Overload) ud af din internet-forbundne port Gi0/0/2
+ip nat inside source list NAT_ACL interface GigabitEthernet0/0/2 overload
 !
 ! --- STATISK ROUTING ---
-! Rute, der sender alt trafik til dit interne netværk tilbage til FortiGate HA Clusterets VIP
+! Rute, der sender alt trafik til dit interne netværk tilbage to FortiGate HA Clusterets VIP
 ip route 192.168.0.0 255.255.0.0 192.168.200.1
 ```
 

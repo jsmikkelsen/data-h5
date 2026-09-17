@@ -54,9 +54,9 @@ Netværket er designet med et ufravigeligt krav om **ingen single-points-of-fail
                             [ Skole/Hjemme-LAN (Internet) ]
                                           |
                                           | (DHCP / NAT Outside)
-                                  [ Gi0/0/1 ]
+                                  [ Gi0/0/2 ]
                              [ Cisco 4331 wan-rt01 ]
-                                  [ Gi0/0/0 ]       [ Gi0/0/2 ]  (L2 Bridged via BDI1)
+                                  [ Gi0/0/0 ]       [ Gi0/0/1 ]  (L2 Bridged via BDI1)
                                        |                 |
                                        | (192.168.200.2) |
                                        |                 |
@@ -89,10 +89,10 @@ Netværket er designet med et ufravigeligt krav om **ingen single-points-of-fail
 ```
 
 ### Hovedprincipper i Arkitekturen:
-* **Direkte WAN-forbindelse:** Cisco 4331 WAN-routeren er kablet direkte til WAN1-porten på begge FortiGates. For at lade Active/Passive HA-clusteret dele den samme eksterne IP (`192.168.200.1`), kører Cisco-routeren en lokal Layer 2 Bridge Domain Interface (`BDI1`) mellem `Gi0/0/0` og `Gi0/0/2`, som giver dem en fælles L2-kontekst.
+* **Direkte WAN-forbindelse:** Cisco 4331 WAN-routeren er kablet direkte til WAN1-porten på begge FortiGates. For at lade Active/Passive HA-clusteret dele den samme eksterne IP (`192.168.200.1`), kører Cisco-routeren en lokal Layer 2 Bridge Domain Interface (`BDI1`) mellem de to hosliggende porte **`Gi0/0/0`** og **`Gi0/0/1`**, som giver dem en fælles L2-kontekst. Den fysiske internetforbindelse routes ud af **`Gi0/0/2`** (NAT Outside).
 * **Logisk Adskillelse (VRF-Lite):** Hver kunde placeres i sin egen VRF (Virtual Routing and Forwarding) kontekst på Core-switchene (`VRF_ALFA`, `VRF_BRAVO`, `VRF_CHARLIE`, `VRF_DELTA`). En kunde kan under ingen omstændigheder se eller kommunikere med andre kunders routingtabeller, medmindre der specifikt opsættes route-leaking.
 * **Kontrolleret Route Leaking (Statisk VRF Leaking):** For at muliggøre kontrolleret internetadgang (via Global Routing Table mod FortiGate), anvendes Cisco's indbyggede statiske VRF leaking. Hver kunde-VRF har en statisk default route, der peger på FortiGates ydre IP i den globale routingtabel (`global`), mens Global Routing Table har præcise returruter, der peger direkte ind i kundenetværkenes VRF-interfaces. Alt andet forbliver isoleret.
 * **Redundans på alle lag:**
-  * **Gateway Redundans:** Leveres med **HSRP (Hot Standby Router Protocol)** på Cisco 3650 switches. Hver kunde har en fælles HSRP Virtual IP (VIP), som automatisk flytter mellem switche ved nedbrud.
+  * **Gateway Redundans:** Leveres med **HSRP (Hot Standby Router Protocol)** på Cisco 3650 switches. Hver kunde har a fælles HSRP Virtual IP (VIP), som automatisk flytter mellem switche ved nedbrud.
   * **Sikkerhed og Edge:** FortiGate 60F kører i **FGCP Active/Passive Clustering**. Hvis den primære firewall fejler, overtager den sekundære umiddelbart IP- og MAC-adresser uden tab af sessioner.
   * **Layer 2 Redundans:** LACP EtherChannels forhindrer links-fejl, og Rapid-PVST+ eller MSTP sikrer lynhurtig loop-prevention.

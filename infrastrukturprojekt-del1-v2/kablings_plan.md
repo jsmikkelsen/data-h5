@@ -9,7 +9,9 @@ Dette dokument indeholder den fulde fysiske kablingsplan for **Infrastrukturproj
 For at forbinde det redundante **FortiGate HA Cluster (Active/Passive)** til den **enkelte Cisco 4331 WAN-router**, anvender vi en yderst professionel direkte forbindelsesmodel:
 *   Vi fjerner WAN-trafikken fuldstændigt fra dine Cisco 2960X access-switche.
 *   I stedet konfigureres et Layer 2 **Bridge Domain Interface (`BDI1`)** direkte på Cisco 4331 WAN-routeren.
-*   Dette omdanner routerens to ydre porte, **`GigabitEthernet0/0/0`** og **`GigabitEthernet0/0/2`**, til en integreret software-switch, som derved tillader, at den aktive FortiGate altid har Layer 2 forbindelse til routeren under et failover, helt uden eksternt switchudstyr.
+*   Dette omdanner routerens to hosliggende og fysisk grupperede porte, **`GigabitEthernet0/0/0`** og **`GigabitEthernet0/0/1`**, til en integreret software-switch.
+*   `Gi0/0/0` kables direkte til `fg-ha-01` (`wan1`), og `Gi0/0/1` kables direkte til `fg-ha-02` (`wan1`).
+*   Den selvstændige port **`GigabitEthernet0/0/2`** kables direkte til dit rigtige internet (skolens/hjemmets netværk) for at levere internetadgang via NAT.
 
 ---
 
@@ -19,8 +21,9 @@ Brug denne tabel som din direkte tjekliste, når du står i serverrummet eller l
 
 | Kilde Enhed | Kilde Port | Destination Enhed | Destination Port | Kabeltype | Funktion / VLAN | Noter |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **wan-rt01** (4331) | `Gi0/0/2` | **Væg-stik / SkoleLAN** | RJ45 Internetstik | Cat6 RJ45 (Grå) | NAT Outside / Internet | Forbinder din WAN-router direkte til det rigtige internet |
 | **wan-rt01** (4331) | `Gi0/0/0` | **fg-ha-01** (FG60F) | `wan1` | Cat6 RJ45 (Grå) | Direkte WAN Link 1 | Direkte WAN link til primær firewall (BDI bridged på router) |
-| **wan-rt01** (4331) | `Gi0/0/2` | **fg-ha-02** (FG60F) | `wan1` | Cat6 RJ45 (Grå) | Direkte WAN Link 2 | Direkte WAN link til sekundær firewall (BDI bridged på router) |
+| **wan-rt01** (4331) | `Gi0/0/1` | **fg-ha-02** (FG60F) | `wan1` | Cat6 RJ45 (Grå) | Direkte WAN Link 2 | Direkte WAN link til sekundær firewall (BDI bridged på router) |
 | **fg-ha-01** (FG60F) | `a` | **fg-ha-02** | `a` | Cat6 RJ45 (Rød) | Heartbeat 1 (HA Sync)| HA synkroniserings-kabel (Fysisk FortiLink Port A) |
 | **fg-ha-01** (FG60F) | `b` | **fg-ha-02** | `b` | Cat6 RJ45 (Rød) | Heartbeat 2 (HA Sync)| Sekundært HA synkroniserings-kabel (Fysisk FortiLink Port B) |
 | **fg-ha-01** (FG60F) | `port4` | **core-sw01** | `Gi1/1/1` | Cat6 RJ45 (Blå) | VLAN 101 (Int. Transit)| Forbinder primær firewall til Core 1 |
@@ -56,4 +59,5 @@ For at gøre fejlfinding og vedligeholdelse ekstremt let og overskueligt, anbefa
 *   🔵 **Blå kabler:** Inter-switch links, trunks, og transitnetværk (VLAN 101) mellem firewall og switche.
 *   ⚫ **Sorte kabler:** High-speed 10 Gbit/s kobber (Cat6a/Cat7) mellem Proxmox-værtens NDC og Core-switchene.
 *   🟢 **Grønne kabler:** Inter-Access switch links for at synkronisere Spanning Tree og L2 VLANs.
-*   ⚙️ **Grå kabler:** Direkte WAN-forbindelser (mellem router og firewalls).
+*   ⚙️ **Grå kabler:** Direkte WAN-forbindelser (mellem router og firewalls samt internet uplink).
+ Josephson / Netic NetBox Standard.

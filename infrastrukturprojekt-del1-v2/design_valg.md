@@ -12,9 +12,9 @@ Netværksarkitekturen bygger på en robust **Collapsed Core** topologi, hvor int
                             [ Skole/Hjemme-LAN (Internet) ]
                                           |
                                           | (DHCP / NAT Outside)
-                                  [ Gi0/0/1 ]
+                                  [ Gi0/0/2 ]
                              [ Cisco 4331 wan-rt01 ]
-                                  [ Gi0/0/0 ]       [ Gi0/0/2 ]  (L2 Bridged via BDI1)
+                                  [ Gi0/0/0 ]       [ Gi0/0/1 ]  (L2 Bridged via BDI1)
                                        |                 |
                                        | (192.168.200.2) |
                                        |                 |
@@ -61,10 +61,11 @@ At forbinde en enkelt routerport til to firewalls i en Active/Passive HA-konfigu
 For at fjerne behovet for eksterne switche på WAN-siden og kable routeren **direkte** til firewalls'ne, har vi implementeret en yderst professionel **Bridge Domain Interface (BDI)** løsning på Cisco 4331:
 
 ### BDI-løsningens opbygning:
-*   Vi konfigurerer to af routerens fysiske porte, **`GigabitEthernet0/0/0`** og **`GigabitEthernet0/0/2`**, som Layer 2 bridged interfaces.
+*   Vi konfigurerer de to hosliggende og fysisk grupperede porte, **`GigabitEthernet0/0/0`** og **`GigabitEthernet0/0/1`**, som Layer 2 bridged interfaces.
 *   De to porte tildeles til **`bridge-domain 1`** via Service Instances i Cisco IOS-XE.
 *   Vi opretter et virtuelt **Bridge Domain Interface (`BDI1`)**, som tildeles WAN-gateway IP'en `192.168.200.2/29`.
-*   Dette omdanner routerens to porte til en indbygget Layer 2 switch. `Gi0/0/0` forbindes direkte til `fg-ha-01` (`wan1`), og `Gi0/0/2` forbindes direkte til `fg-ha-02` (`wan1`).
+*   Dette omdanner routerens to porte til en indbygget Layer 2 switch. `Gi0/0/0` forbindes direkte til `fg-ha-01` (`wan1`), og `Gi0/0/1` forbindes direkte til `fg-ha-02` (`wan1`).
+*   Den fysiske internetforbindelse (skolens/labbets netværk) routes ud af den selvstændige port **`GigabitEthernet0/0/2`** (NAT Outside via DHCP).
 *   Når FortiGate-clusteret laver et failover og flytter den virtuelle eksterne MAC-adresse, fanges det øjeblikkeligt af Cisco-routerens integrerede bro-tabel, og trafikken flyttes automatisk uden tab af sessioner eller ping-forbindelse.
 
 ---
@@ -98,8 +99,8 @@ I Proxmox VE (Debian Linux) navngives disse integrerede onboard-porte som henhol
 
 ### Fysisk Forbindelsesdesign (Cabling):
 1.  **Kunde/Data Forbindelse (10 Gbit/s RJ45):**
-    *   **`eno1` (10G)** forbindes til `core-sw01` (Te1/0/1).
-    *   **`eno2` (10G)** forbindes til `core-sw02` (Te1/0/1).
+    *   **`eno1` (10G)** forbindes to `core-sw01` (Te1/0/1).
+    *   **`eno2` (10G)** forbindes to `core-sw02` (Te1/0/1).
     *   Disse to 10G kobber-porte konfigureres i Proxmox som et **LACP (802.3ad) Bond** og opsættes som en **VLAN-Aware trunk** mod Core-switchene. Dette sikrer 20 Gbit/s aggregeret båndbredde samt komplet switch-redundans for alle kundernes VM'er (VLAN 10, 20, 30, 40).
 2.  **Management / Vært Forbindelse (1 Gbit/s RJ45):**
     *   **`eno3` (1G)** forbindes til access-switchen `acc-sw01` (port `Gi0/10` - VLAN 99).

@@ -46,31 +46,54 @@ Dokumentationen er opdelt i præcise, faglige moduler, der følger standarderne 
 
 ## 🛠️ Overordnet Systemarkitektur
 
-Netværket er designet med et ufravigeligt krav om **ingen single-points-of-failure (SPOF)**, solid logisk segmentering og maksimal skalerbarhed.
+Netværket er designet med et ufravigeligt krav om **ingen single-points-of-failure (SPOF)**, komplet fysisk redundans, samt streng logisk segmentering.
 
 ```
-                  [ Cisco 4331 WAN/ISP ]
-                            | (Transit VLAN 200)
-             +--------------+--------------+
-             |                             |
-      [ FortiGate 60F ]======HA======[ FortiGate 60F ] (Edge Active/Passive FGCP Cluster)
-             |                             |
-             +--------------+--------------+
-                            | (Transit VLAN 101)
-                    +-------+-------+
-                    |               | (EtherChannel / LACP)
-             [ Cisco 3650-1 ]=====[ Cisco 3650-2 ] (Collapsed Core, VRF-Lite & HSRP)
-                    ||   \       /   ||
-                    ||    \     /    || (Cross-linked EtherChannels)
-                    ||     \   /     ||
-             [ Cisco 2960X-1 ]====[ Cisco 2960X-2 ] (Access lag med LACP trunking)
-                    |                |
-             [ Klienter / Server ]---+
+                            [ Skole/Hjemme-LAN (Internet) ]
+                                          |
+                                          | (DHCP / NAT Outside)
+                                  [ Gi0/0/1 ]
+                             [ Cisco 4331 wan-rt01 ]
+                                  [ Gi0/0/0 ]
+                                      |
+                                      | (192.168.200.2 /29)
+                                      |
+                         +------------+ (VLAN 200 WAN Transit)
+                         |
+                 [ Cisco 2960X-1 ]========Trunk (VLAN 200 & 99)========[ Cisco 2960X-2 ]
+                 [   Gi0/24      ]                                     [   Gi0/24      ]
+                       |                                                   |
+                   [ wan1 ]                                            [ wan1 ]
+             [ FortiGate 60F - 1 ]==========HA (Port a & b)==========[ FortiGate 60F - 2 ]
+                   [ port4 ]                                           [ port4 ]
+                       |                                                   |
+                       | (192.168.101.2 /29)                               | (192.168.101.3 /29)
+                       |                                                   |
+                 [ Gi1/1/1 ]                                         [ Gi1/1/1 ]
+             [ Cisco 3650 core-sw01 ]====Inter-Core L3 (Gi1/1/2)====[ Cisco 3650 core-sw02 ]
+                 [ Port-Channel 1 ]                                  [ Port-Channel 1 ]
+                       ||                                                  ||
+                       || (LACP Trunk VLAN 10,20,30,40,99)                 ||
+                       ||                                                  ||
+                 [ Port-Channel 1 ]                                  [ Port-Channel 1 ]
+                 [ Cisco 2960X-1  ]==================================[ Cisco 2960X-2  ]
+                   [ Gi0/10 ]                                          [ Gi0/10 ]
+                       | (1G Management VLAN 99 Active/Backup)             |
+                       +-------------------+   +---------------------------+
+                                           |   |
+                                        [ eno3 | eno4 ] (1G Onboard)
+                                     [ Dell PowerEdge R630 ]
+                                        [ eno1 | eno2 ] (10G Onboard)
+                                           |   |
+                       +-------------------+   +---------------------------+
+                       | (10G Customer Trunk LACP)                         |
+                 [ Te1/0/1 ]                                         [ Te1/0/1 ]
+             [ Cisco 3650 core-sw01 ]                                [ Cisco 3650 core-sw02 ]
 ```
 
 ### Hovedprincipper i Arkitekturen:
 * **Logisk Adskillelse (VRF-Lite):** Hver kunde placeres i sin egen VRF (Virtual Routing and Forwarding) kontekst på Core-switchene (`VRF_ALFA`, `VRF_BRAVO`, `VRF_CHARLIE`, `VRF_DELTA`). En kunde kan under ingen omstændigheder se eller kommunikere med andre kunders routingtabeller, medmindre der specifikt opsættes route-leaking.
-* **Controlled Route Leaking:** For at muliggøre kontrolleret kommunikation (f.eks. til en fælles ressource i Global Routing Table, som en server eller WAN-porten), anvendes MP-BGP eller kontrolleret statisk route-leaking på vores Cisco 3650 switches. Kun de specifikke adresser, der er nødvendige, lækkes til Global Routing Table, mens alt andet forbliver isoleret.
+* **Kontrolleret Route Leaking (Statisk VRF Leaking):** For at muliggøre kontrolleret internetadgang (via Global Routing Table mod FortiGate), anvendes Cisco's indbyggede statiske VRF leaking. Hver kunde-VRF har en statisk default route, der peger på FortiGates ydre IP i den globale routingtabel (`global`), mens Global Routing Table har præcise returruter, der peger direkte ind i kundenetværkenes VRF-interfaces. Alt andet forbliver isoleret.
 * **Redundans på alle lag:**
   * **Gateway Redundans:** Leveres med **HSRP (Hot Standby Router Protocol)** på Cisco 3650 switches. Hver kunde har en fælles HSRP Virtual IP (VIP), som automatisk flytter mellem switche ved nedbrud.
   * **Sikkerhed og Edge:** FortiGate 60F kører i **FGCP Active/Passive Clustering**. Hvis den primære firewall fejler, overtager den sekundære umiddelbart IP- og MAC-adresser uden tab af sessioner.

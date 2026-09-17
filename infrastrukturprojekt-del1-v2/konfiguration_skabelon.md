@@ -1,12 +1,12 @@
-# Cisco IOS-XE & FortiOS Konfigurationsskabeloner (Version 2)
+# Cisco IOS-XE, FortiOS & Proxmox VE Konfigurationsskabeloner (v2)
 
-Dette dokument indeholder komplette, produktionsklare og grundigt kommenterede konfigurationsskabeloner for alle enheder i netværksplatformen. Alle parametre (IP-adresser, VLAN-numre, HSRP-prioriteter og VRF-kontekster) stemmer 100% overens med den godkendte v2 IP- og VLAN-plan.
+Dette dokument indeholder komplette, produktionsklare og kommenterede konfigurationsskabeloner for alle enheder i netværksplatformen. Alle parametre (IP-adresser, VLAN-numre, HSRP-prioriteter og VRF-kontekster) er baseret på **Statisk VRF Leaking** uden dynamic routing, hvilket gør designet robust og enkelt.
 
 ---
 
 ## 1. core-sw01 (Cisco Catalyst 3650 - Primær Core)
 
-Denne switch agerer Active Gateway for **VLAN 10 (Kunde Alfa)** og **VLAN 20 (Kunde Bravo)** samt **VLAN 99 (Management)**, og Standby Gateway for VLAN 30 (Charlie) og 40 (Delta).
+Denne switch agerer Active Gateway for **VLAN 10 (Kunde Alfa)**, **VLAN 20 (Kunde Bravo)** samt **VLAN 99 (Management)**.
 
 ```cisco
 ! --- SYSTEM & MANAGEMENT ---
@@ -31,36 +31,18 @@ line vty 0 15
 ! --- OPRET VRF'ER (VRF-LITE) ---
 ip vrf VRF_ALFA
  rd 65001:10
- route-target export 65001:10
- route-target import 65001:10
- route-target export 65001:999   ! Eksporterer til Global (GRT)
- route-target import 65001:999   ! Importerer fra Global (GRT)
 !
 ip vrf VRF_BRAVO
  rd 65001:20
- route-target export 65001:20
- route-target import 65001:20
- route-target export 65001:999
- route-target import 65001:999
 !
 ip vrf VRF_CHARLIE
  rd 65001:30
- route-target export 65001:30
- route-target import 65001:30
- route-target export 65001:999
- route-target import 65001:999
 !
 ip vrf VRF_DELTA
  rd 65001:40
- route-target export 65001:40
- route-target import 65001:40
- route-target export 65001:999
- route-target import 65001:999
 !
 ip vrf VRF_MGMT
  rd 65001:99
- route-target export 65001:99
- route-target import 65001:99
 !
 ! --- MULTILAYER SWITCHING ---
 ip routing
@@ -131,19 +113,13 @@ interface Vlan99
 !
 ! --- TRANSIT TIL EDGE (GLOBAL ROUTING TABLE) ---
 interface Vlan101
- description Forbindelse mod FortiGate Edge Cluster
+ description Forbindelse mod FortiGate Edge Cluster (GRT)
  ip address 192.168.101.2 255.255.255.248
  standby version 2
  standby 101 ip 192.168.101.4
  standby 101 priority 110
  standby 101 preempt
  standby 101 track GigabitEthernet1/1/1 20
-!
-! --- BACKPLANE LINK MOD CORE-SW02 (ROUTED PORT) ---
-interface GigabitEthernet1/1/2
- description Inter-Core L3 link
- no switchport
- ip address 192.168.255.1 255.255.255.252
 !
 ! --- UPLINK PORT MOD FORTIGATE (L2 TRUNK) ---
 interface GigabitEthernet1/1/1
@@ -163,52 +139,28 @@ interface Port-channel 1
  switchport trunk allowed vlan 10,20,30,40,99
  switchport mode trunk
 !
-! --- ROUTE LEAKING & BGP ---
-router bgp 65001
- bgp log-neighbor-changes
- ! Peering med core-sw02 i GRT
- neighbor 192.168.255.2 remote-as 65001
- neighbor 192.168.255.2 description Peering med core-sw02
- !
- address-family ipv4
-  neighbor 192.168.255.2 activate
-  network 192.168.101.0 mask 255.255.255.248
-  ! Default route i GRT peger mod FortiGate Edge
-  ip route 0.0.0.0 0.0.0.0 192.168.101.1
- exit-address-family
- !
- address-family ipv4 vrf VRF_ALFA
-  redistribute connected
- exit-address-family
- !
- address-family ipv4 vrf VRF_BRAVO
-  redistribute connected
- exit-address-family
- !
- address-family ipv4 vrf VRF_CHARLIE
-  redistribute connected
- exit-address-family
- !
- address-family ipv4 vrf VRF_DELTA
-  redistribute connected
- exit-address-family
+! --- STATISK ROUTE LEAKING CONFIGURATION ---
+! Vej ud: Statisk default route fra hver kunde VRF til det globale transit-vlan (FortiGate VIP)
+ip route vrf VRF_ALFA 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
+ip route vrf VRF_BRAVO 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
+ip route vrf VRF_CHARLIE 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
+ip route vrf VRF_DELTA 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
 !
-! --- ALT. STATISK ROUTE LEAKING SNIPPET (Anvendes hvis BGP fravælges) ---
-! ip route vrf VRF_ALFA 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
-! ip route vrf VRF_BRAVO 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
-! ip route vrf VRF_CHARLIE 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
-! ip route vrf VRF_DELTA 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
-! ip route 192.168.10.0 255.255.255.0 Vlan10 192.168.10.10 vrf VRF_ALFA
-! ip route 192.168.20.0 255.255.255.0 Vlan20 192.168.20.10 vrf VRF_BRAVO
-! ip route 192.168.30.0 255.255.255.0 Vlan30 192.168.30.10 vrf VRF_CHARLIE
-! ip route 192.168.40.0 255.255.255.0 Vlan40 192.168.40.10 vrf VRF_DELTA
+! Vej ind (Returruter): Ruter i Global Routing Table pegende ind i de respektive VRF-interfaces
+ip route 192.168.10.0 255.255.255.0 Vlan10 vrf VRF_ALFA
+ip route 192.168.20.0 255.255.255.0 Vlan20 vrf VRF_BRAVO
+ip route 192.168.30.0 255.255.255.0 Vlan30 vrf VRF_CHARLIE
+ip route 192.168.40.0 255.255.255.0 Vlan40 vrf VRF_DELTA
+!
+! Global Default-route mod FortiGate Edge-firewall
+ip route 0.0.0.0 0.0.0.0 192.168.101.1
 ```
 
 ---
 
 ## 2. core-sw02 (Cisco Catalyst 3650 - Sekundær Core)
 
-Denne switch agerer Active Gateway for **VLAN 30 (Kunde Charlie)** and **VLAN 40 (Kunde Delta)**, og Standby Gateway for VLAN 10 (Alfa), 20 (Bravo) og 99 (Management).
+Denne switch agerer Active Gateway for **VLAN 30 (Kunde Charlie)** and **VLAN 40 (Kunde Delta)**.
 
 ```cisco
 ! --- SYSTEM & MANAGEMENT ---
@@ -233,36 +185,18 @@ line vty 0 15
 ! --- OPRET VRF'ER ---
 ip vrf VRF_ALFA
  rd 65001:10
- route-target export 65001:10
- route-target import 65001:10
- route-target export 65001:999
- route-target import 65001:999
 !
 ip vrf VRF_BRAVO
  rd 65001:20
- route-target export 65001:20
- route-target import 65001:20
- route-target export 65001:999
- route-target import 65001:999
 !
 ip vrf VRF_CHARLIE
  rd 65001:30
- route-target export 65001:30
- route-target import 65001:30
- route-target export 65001:999
- route-target import 65001:999
 !
 ip vrf VRF_DELTA
  rd 65001:40
- route-target export 65001:40
- route-target import 65001:40
- route-target export 65001:999
- route-target import 65001:999
 !
 ip vrf VRF_MGMT
  rd 65001:99
- route-target export 65001:99
- route-target import 65001:99
 !
 ip routing
 !
@@ -332,20 +266,14 @@ interface Vlan99
 !
 ! --- TRANSIT TIL EDGE (GLOBAL ROUTING TABLE) ---
 interface Vlan101
- description Forbindelse mod FortiGate Edge Cluster
+ description Forbindelse mod FortiGate Edge Cluster (GRT)
  ip address 192.168.101.3 255.255.255.248
  standby version 2
  standby 101 ip 192.168.101.4
  standby 101 priority 100
  standby 10 preempt
 !
-! --- BACKPLANE LINK MOD CORE-SW01 (ROUTED PORT) ---
-interface GigabitEthernet1/1/2
- description Inter-Core L3 link
- no switchport
- ip address 192.168.255.2 255.255.255.252
-!
-! --- UPLINK PORT MOD FORTIGATE (L2 TRUNK) ---
+! --- UPLINK PORT MOD FORTIGATE ---
 interface GigabitEthernet1/1/1
  description Uplink mod FortiGate Edge cluster Port 4
  switchport trunk allowed vlan 101
@@ -363,32 +291,18 @@ interface Port-channel 1
  switchport trunk allowed vlan 10,20,30,40,99
  switchport mode trunk
 !
-! --- ROUTE LEAKING & BGP ---
-router bgp 65001
- neighbor 192.168.255.1 remote-as 65001
- neighbor 192.168.255.1 description Peering med core-sw01
- !
- address-family ipv4
-  neighbor 192.168.255.1 activate
-  network 192.168.101.0 mask 255.255.255.248
-  ip route 0.0.0.0 0.0.0.0 192.168.101.1
- exit-address-family
- !
- address-family ipv4 vrf VRF_ALFA
-  redistribute connected
- exit-address-family
- !
- address-family ipv4 vrf VRF_BRAVO
-  redistribute connected
- exit-address-family
- !
- address-family ipv4 vrf VRF_CHARLIE
-  redistribute connected
- exit-address-family
- !
- address-family ipv4 vrf VRF_DELTA
-  redistribute connected
- exit-address-family
+! --- STATISK ROUTE LEAKING CONFIGURATION ---
+ip route vrf VRF_ALFA 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
+ip route vrf VRF_BRAVO 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
+ip route vrf VRF_CHARLIE 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
+ip route vrf VRF_DELTA 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
+!
+ip route 192.168.10.0 255.255.255.0 Vlan10 vrf VRF_ALFA
+ip route 192.168.20.0 255.255.255.0 Vlan20 vrf VRF_BRAVO
+ip route 192.168.30.0 255.255.255.0 Vlan30 vrf VRF_CHARLIE
+ip route 192.168.40.0 255.255.255.0 Vlan40 vrf VRF_DELTA
+!
+ip route 0.0.0.0 0.0.0.0 192.168.101.1
 ```
 
 ---
@@ -463,27 +377,21 @@ interface GigabitEthernet0/4
  spanning-tree portfast
  spanning-tree bpduguard enable
 !
-! --- SERVER FORBEREDELSE (PORT CHANNEL) ---
-interface range GigabitEthernet0/5 - 6
- description Redundant LACP Trunk til fysisk server (1G NICs)
- switchport trunk allowed vlan 10,20,30,40,99
- switchport mode trunk
- channel-group 2 mode active
-!
-interface Port-channel 2
- description Trunk til server data
- switchport trunk allowed vlan 10,20,30,40,99
- switchport mode trunk
+! --- PORTE TIL PROXMOX HOST MANAGEMENT (VLAN 99) ---
+interface range GigabitEthernet0/10 - 11
+ description Redundant LACP Access-port til Proxmox Host Management (1G)
+ switchport access vlan 99
+ switchport mode access
+ spanning-tree portfast
+ spanning-tree bpduguard enable
 ```
 
 ---
 
 ## 4. fg-ha (FortiGate 60F - HA Active/Passive Cluster)
 
-FortiGate CLI konfigurationen opsætter det redundante HA cluster (FGCP), tildeler IP-adresser på interfaces i Root/Global VDOM, definerer routing og grundlæggende firewall-regler med NAT (Port-Forwarding/Overload) til internettet.
-
 ```fortinet
-# --- HA CONFIGURATION (UDFØRES PÅ BEGGE ENHEDER FØR SAMLING) ---
+# --- HA CONFIGURATION ---
 config system global
     set hostname "fg-ha-cluster"
 end
@@ -491,13 +399,13 @@ config system ha
     set group-id 1
     set group-name "Netic-Core-HA"
     set mode a-p
-    set hbdev "port5" 50 "port6" 50   # Port 5 & 6 allokeres til heartbeat
-    set session-pickup enable          # Synkroniserer aktive TCP-forbindelser
-    set priority 200                   # (Sæt til 100 på den sekundære firewall)
-    set monitor "port4" "wan1"         # Monitorer interne og eksterne interfaces
+    set hbdev "port5" 50 "port6" 50
+    set session-pickup enable
+    set priority 200
+    set monitor "port4" "wan1"
 end
 
-# --- INTERFACES & IPS (SYNKRONSISERES AUTOMATISK VIA HA) ---
+# --- INTERFACES & IPS ---
 config system interface
     edit "port4"
         set vdom "root"
@@ -534,28 +442,8 @@ config router static
     next
 end
 
-# --- ADRESSE OBJEKTER FOR SEGMENTER ---
-config firewall address
-    edit "Kunde-Alfa-LAN"
-        set subnet 192.168.10.0 255.255.255.0
-    next
-    edit "Kunde-Bravo-LAN"
-        set subnet 192.168.20.0 255.255.255.0
-    next
-    edit "Kunde-Charlie-LAN"
-        set subnet 192.168.30.0 255.255.255.0
-    next
-    edit "Kunde-Delta-LAN"
-        set subnet 192.168.40.0 255.255.255.0
-    next
-    edit "Management-Net"
-        set subnet 192.168.99.0 255.255.255.0
-    next
-end
-
 # --- FIREWALL POLICIES ---
 config firewall policy
-    # Tillad Kunde Alfa internetadgang
     edit 10
         set name "Kunde-Alfa-to-Internet"
         set srcintf "port4"
@@ -565,12 +453,8 @@ config firewall policy
         set action accept
         set schedule "always"
         set service "ALL"
-        set utm-status enable          # Aktiverer sikkerhedsscanning
-        set ssl-ssh-profile "certificate-inspection"
-        set ips-sensor "default"
-        set nat enable                 # NAT aktiveres for WAN-overload (PAT)
+        set nat enable
     next
-    # Tillad Kunde Bravo internetadgang
     edit 20
         set name "Kunde-Bravo-to-Internet"
         set srcintf "port4"
@@ -580,46 +464,65 @@ config firewall policy
         set action accept
         set schedule "always"
         set service "ALL"
-        set utm-status enable
-        set ssl-ssh-profile "certificate-inspection"
-        set ips-sensor "default"
         set nat enable
-    next
-    # Blokering fra Kunde-netværk til Management-netværk (Sikkerhedskrav)
-    edit 90
-        set name "Deny-Customers-to-Management"
-        set srcintf "port4"
-        set dstintf "port1"
-        set srcaddr "all"
-        set dstaddr "Management-Net"
-        set action deny
-        set schedule "always"
-        set service "ALL"
     next
 end
 ```
 
 ---
 
-## 5. wan-rt01 (Cisco ISR 4331 - WAN/ISP Simulator)
+## 5. Proxmox VE Netværkskonfigurationsfil (`/etc/network/interfaces`)
 
-Denne router modtager trafikken fra FortiGate WAN-interfacet og sender den videre til simuleret internet, eller agerer shared services server.
+Dette er den faktiske konfigurationsfil, der skal installeres på din fysiske server for at understøtte både ** redundant host-management** (1G) og ** redundant vlan-aware data-trunking** (10G).
 
-```cisco
-hostname wan-rt01
-!
-enable secret admin123
-!
-interface GigabitEthernet0/0/0
- description WAN-forbindelse mod FortiGate HA wan1
- ip address 192.168.200.2 255.255.255.252
- no shutdown
-!
-interface Loopback0
- description Simuleret ekstern ressource (Shared Services / Google DNS)
- ip address 8.8.8.8 255.255.255.255
-!
-! --- ROUTING ---
-! Rute tilbage til det samlede virksomhedsnetværk via FortiGate WAN VIP
-ip route 192.168.0.0 255.255.0.0 192.168.200.1
+```text
+# Loopback interface
+auto lo
+iface lo inet loopback
+
+# 1G Fysiske kort (Management & OOB)
+iface eno1 inet manual
+iface eno2 inet manual
+
+# 10G Fysiske kort (Kunde/Data trunk)
+iface ens1f0 inet manual
+iface ens1f1 inet manual
+
+# --- MANAGMENT NETVÆRK (VLAN 99) ---
+# Vi samler de to 1G kort i en redundant backup-forbindelse
+auto bond1
+iface bond1 inet manual
+	bond-slaves eno1 eno2
+	bond-miimon 100
+	bond-mode active-backup
+
+# Bridge til Proxmox Host Management IP. 
+# Kun administrationspc'er i VLAN 99 kan tilgå Web GUI på port 8006
+auto vmbr99
+iface vmbr99 inet static
+	address 192.168.99.100/24
+	gateway 192.168.99.1
+	bridge-ports bond1
+	bridge-stp off
+	bridge-fd 0
+	comment "Proxmox Host Management IP - VLAN 99"
+
+# --- KUNDE DATA TRUNK NETVÆRK ---
+# Vi samler de to 10G kort i en høj-hastigheds LACP bond
+auto bond0
+iface bond0 inet manual
+	bond-slaves ens1f0 ens1f1
+	bond-miimon 100
+	bond-mode 802.3ad
+	bond-xmit-hash-policy layer2+3
+
+# VLAN Aware Bridge (Ingen IP-adresse på vært-niveau)
+auto vmbr0
+iface vmbr0 inet manual
+	bridge-ports bond0
+	bridge-stp off
+	bridge-fd 0
+	bridge-vlan-aware yes
+	bridge-vids 10 20 30 40
+	comment "Kunde-trafik Bridge (VLAN Tagging sker på VM-niveau)"
 ```

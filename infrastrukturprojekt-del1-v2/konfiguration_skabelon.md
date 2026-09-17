@@ -1,12 +1,12 @@
 # Cisco IOS-XE, FortiOS & Proxmox VE Konfigurationsskabeloner (v2)
 
-Dette dokument indeholder komplette, produktionsklare og kommenterede konfigurationsskabeloner for alle enheder i netværksplatformen. Alle parametre (IP-adresser, VLAN-numre, HSRP-prioriteter og VRF-kontekster) er baseret på **Statisk VRF Leaking** uden dynamic routing, hvilket gør designet robust og enkelt.
+Dette dokument indeholder de komplette, udeladelsesfrie, produktionsklare og fuldt kommenterede konfigurationsskabeloner for alle enheder i netværksplatformen. Alle parametre (IP-adresser, VLAN-numre, HSRP-prioriteter og VRF-kontekster) er baseret på **Statisk VRF Leaking** uden dynamic routing, hvilket gør designet ekstremt robust og driftsikkert.
 
 ---
 
 ## 1. core-sw01 (Cisco Catalyst 3650 - Primær Core)
 
-Denne switch agerer Active Gateway for **VLAN 10 (Kunde Alfa)**, **VLAN 20 (Kunde Bravo)** samt **VLAN 99 (Management)**.
+Denne switch agerer Active Gateway for **VLAN 10 (Kunde Alfa)**, **VLAN 20 (Kunde Bravo)** samt **VLAN 99 (Management)**, og Standby Gateway for VLAN 30 (Charlie) og VLAN 40 (Delta).
 
 ```cisco
 ! --- SYSTEM & MANAGEMENT ---
@@ -121,6 +121,12 @@ interface Vlan101
  standby 101 preempt
  standby 101 track GigabitEthernet1/1/1 20
 !
+! --- INTER-CORE ROUTING LINK ---
+interface GigabitEthernet1/1/2
+ description Inter-Core L3 link til core-sw02
+ no switchport
+ ip address 192.168.255.1 255.255.255.252
+!
 ! --- UPLINK PORT MOD FORTIGATE (L2 TRUNK) ---
 interface GigabitEthernet1/1/1
  description Uplink mod FortiGate Edge cluster Port 4
@@ -139,7 +145,7 @@ interface Port-channel 1
  switchport trunk allowed vlan 10,20,30,40,99
  switchport mode trunk
 !
-! --- STATISK ROUTE LEAKING CONFIGURATION ---
+! --- STATISK VRF ROUTE LEAKING CONFIGURATION ---
 ! Vej ud: Statisk default route fra hver kunde VRF til det globale transit-vlan (FortiGate VIP)
 ip route vrf VRF_ALFA 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
 ip route vrf VRF_BRAVO 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
@@ -160,7 +166,7 @@ ip route 0.0.0.0 0.0.0.0 192.168.101.1
 
 ## 2. core-sw02 (Cisco Catalyst 3650 - Sekundær Core)
 
-Denne switch agerer Active Gateway for **VLAN 30 (Kunde Charlie)** and **VLAN 40 (Kunde Delta)**.
+Denne switch agerer Active Gateway for **VLAN 30 (Kunde Charlie)** og **VLAN 40 (Kunde Delta)**, og Standby Gateway for VLAN 10 (Alfa), 20 (Bravo) og 99 (Management).
 
 ```cisco
 ! --- SYSTEM & MANAGEMENT ---
@@ -273,6 +279,12 @@ interface Vlan101
  standby 101 priority 100
  standby 10 preempt
 !
+! --- INTER-CORE ROUTING LINK ---
+interface GigabitEthernet1/1/2
+ description Inter-Core L3 link til core-sw01
+ no switchport
+ ip address 192.168.255.2 255.255.255.252
+!
 ! --- UPLINK PORT MOD FORTIGATE ---
 interface GigabitEthernet1/1/1
  description Uplink mod FortiGate Edge cluster Port 4
@@ -291,7 +303,7 @@ interface Port-channel 1
  switchport trunk allowed vlan 10,20,30,40,99
  switchport mode trunk
 !
-! --- STATISK ROUTE LEAKING CONFIGURATION ---
+! --- STATISK VRF ROUTE LEAKING CONFIGURATION ---
 ip route vrf VRF_ALFA 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
 ip route vrf VRF_BRAVO 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
 ip route vrf VRF_CHARLIE 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
@@ -307,14 +319,16 @@ ip route 0.0.0.0 0.0.0.0 192.168.101.1
 
 ---
 
-## 3. acc-sw01 (Cisco Catalyst 2960X - Access Switch)
+## 3. acc-sw01 / acc-sw02 (Cisco Catalyst 2960X - Access Switches)
 
-Denne switch leverer L2-forbindelse til klienter og tilhørende VLAN-segmentering. Konfigurationen gælder ligeledes for `acc-sw02`.
+Disse switche leverer L2-forbindelse til klienter, den fysiske server og foretager VLAN-segmentering. Konfigurationen er ens for begge switche (tilpas blot IP-adressen på SVI interface Vlan99).
 
 ```cisco
 hostname acc-sw01
 !
 enable secret admin123
+!
+username admin privilege 15 secret admin123
 !
 vlan 10
  name Kunde_Alfa_LAN
@@ -329,22 +343,24 @@ vlan 99
 !
 spanning-tree mode rapid-pvst
 !
-! --- MANAGEMENT SVI ---
+! --- MANAGEMENT INTERFACE ---
 interface Vlan99
+ description Administrations IP for switchen
  ip address 192.168.99.11 255.255.255.0
- no shut
+ no shutdown
 !
+! Default gateway peger på HSRP VIP i VRF_MGMT
 ip default-gateway 192.168.99.1
 !
-! --- TRUNK PORTE MOD CORE (ETHERCHANNEL) ---
+! --- TRUNK PORTE MOD CORE (LACP ETHERCHANNEL) ---
 interface range GigabitEthernet0/49 - 50
- description EtherChannel mod core-sw01
+ description Redundant trunk mod core-sw01
  switchport trunk allowed vlan 10,20,30,40,99
  switchport mode trunk
  channel-group 1 mode active
 !
 interface Port-channel 1
- description Trunk mod Core
+ description Bundled Trunk til Core
  switchport trunk allowed vlan 10,20,30,40,99
  switchport mode trunk
 !
@@ -379,7 +395,7 @@ interface GigabitEthernet0/4
 !
 ! --- PORTE TIL PROXMOX HOST MANAGEMENT (VLAN 99) ---
 interface range GigabitEthernet0/10 - 11
- description Redundant LACP Access-port til Proxmox Host Management (1G)
+ description Redundante access-porte til Proxmox Host Management (1G RJ45)
  switchport access vlan 99
  switchport mode access
  spanning-tree portfast
@@ -390,8 +406,10 @@ interface range GigabitEthernet0/10 - 11
 
 ## 4. fg-ha (FortiGate 60F - HA Active/Passive Cluster)
 
+FortiGate-konfigurationen samler de to enheder i et synkroniseret Active/Passive cluster og tildeler IP-adresser, ruter, adresse-objekter og firewall-regler.
+
 ```fortinet
-# --- HA CONFIGURATION ---
+# --- HA CLUSTERING OPSÆTNING ---
 config system global
     set hostname "fg-ha-cluster"
 end
@@ -405,13 +423,13 @@ config system ha
     set monitor "port4" "wan1"
 end
 
-# --- INTERFACES & IPS ---
+# --- SYSTEM INTERFACES & ADRESSERING ---
 config system interface
     edit "port4"
         set vdom "root"
         set ip 192.168.101.1 255.255.255.248
         set allowaccess ping ssh https
-        set description "Intern transit-interface mod Cisco 3650 Core"
+        set description "Intern transit mod Cisco 3650 Core (GRT)"
     next
     edit "wan1"
         set vdom "root"
@@ -423,7 +441,7 @@ config system interface
         set vdom "root"
         set ip 192.168.99.254 255.255.255.0
         set allowaccess ping ssh https gui
-        set description "Dedikeret ud-af-båndet management-port"
+        set description "Dedikeret management-port (VLAN 99)"
     next
 end
 
@@ -432,13 +450,32 @@ config router static
     edit 1
         set gateway 192.168.200.2
         set device "wan1"
-        set comment "Default Route mod ISP (Cisco 4331)"
+        set comment "Default Route mod internettet / ISP (Cisco 4331)"
     next
     edit 2
         set dst 192.168.0.0 255.255.0.0
-        set gateway 192.168.101.4       # Peger på Core-switchenes HSRP VIP i GRT
+        set gateway 192.168.101.4
         set device "port4"
-        set comment "Statisk rute til det samlede interne netværk"
+        set comment "Statisk rute til det samlede interne netværksmiljø"
+    next
+end
+
+# --- FIREWALL ADRESSE OBJEKTER ---
+config firewall address
+    edit "Kunde-Alfa-LAN"
+        set subnet 192.168.10.0 255.255.255.0
+    next
+    edit "Kunde-Bravo-LAN"
+        set subnet 192.168.20.0 255.255.255.0
+    next
+    edit "Kunde-Charlie-LAN"
+        set subnet 192.168.30.0 255.255.255.0
+    next
+    edit "Kunde-Delta-LAN"
+        set subnet 192.168.40.0 255.255.255.0
+    next
+    edit "Management-Net"
+        set subnet 192.168.99.0 255.255.255.0
     next
 end
 
@@ -466,14 +503,70 @@ config firewall policy
         set service "ALL"
         set nat enable
     next
+    edit 30
+        set name "Kunde-Charlie-to-Internet"
+        set srcintf "port4"
+        set dstintf "wan1"
+        set srcaddr "Kunde-Charlie-LAN"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+        set nat enable
+    next
+    edit 40
+        set name "Kunde-Delta-to-Internet"
+        set srcintf "port4"
+        set dstintf "wan1"
+        set srcaddr "Kunde-Delta-LAN"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+        set nat enable
+    next
+    edit 90
+        set name "Block-Customers-to-Management"
+        set srcintf "port4"
+        set dstintf "port1"
+        set srcaddr "all"
+        set dstaddr "Management-Net"
+        set action deny
+        set schedule "always"
+        set service "ALL"
+    next
 end
 ```
 
 ---
 
-## 5. Proxmox VE Netværkskonfigurationsfil (`/etc/network/interfaces`) på Dell R630
+## 5. wan-rt01 (Cisco ISR 4331 - WAN/ISP Simulator)
 
-Dette er den faktiske konfigurationsfil, der skal installeres på din **Dell PowerEdge R630** fysiske server for at understøtte både ** redundant host-management** (1G - eno3/eno4) og ** redundant vlan-aware data-trunking** (10G - eno1/eno2).
+Denne router modtager trafikken fra FortiGate WAN-interfacet og sender den videre til simuleret internet (f.eks. Google DNS), og routes tilbage til det samlede virksomhedsmiljø.
+
+```cisco
+hostname wan-rt01
+!
+enable secret admin123
+!
+interface GigabitEthernet0/0/0
+ description WAN-forbindelse mod FortiGate HA wan1
+ ip address 192.168.200.2 255.255.255.252
+ no shutdown
+!
+interface Loopback0
+ description Simuleret ekstern ressource (Google DNS / Root-server)
+ ip address 8.8.8.8 255.255.255.255
+!
+! --- ROUTING ---
+ip route 192.168.0.0 255.255.0.0 192.168.200.1
+```
+
+---
+
+## 6. Proxmox VE Netværkskonfigurationsfil (`/etc/network/interfaces`) på Dell R630
+
+Dette er den faktiske, udeladelsesfrie konfigurationsfil, der skal installeres på din **Dell PowerEdge R630** fysiske server for at understøtte både **redundant host-management** (1G - eno3/eno4) og **redundant vlan-aware data-trunking** (10G - eno1/eno2).
 
 ```text
 # Loopback interface
@@ -490,7 +583,7 @@ iface eno3 inet manual
 iface eno4 inet manual
 
 # --- MANAGMENT NETVÆRK (VLAN 99) ---
-# Vi samler de to onboard 1G kort i en redundant backup-forbindelse
+# Vi samler de to onboard 1G-porte i en redundant backup-forbindelse
 auto bond1
 iface bond1 inet manual
 	bond-slaves eno3 eno4
@@ -509,7 +602,7 @@ iface vmbr99 inet static
 	comment "Proxmox Host Management IP - VLAN 99"
 
 # --- KUNDE DATA TRUNK NETVÆRK ---
-# Vi samler de to onboard 10G kobber-kort i en høj-hastigheds LACP bond
+# Vi samler de to onboard 10G kobber-porte i en høj-hastigheds LACP bond
 auto bond0
 iface bond0 inet manual
 	bond-slaves eno1 eno2

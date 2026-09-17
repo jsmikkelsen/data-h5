@@ -441,7 +441,7 @@ config system ha
     set group-id 1
     set group-name "Netic-Core-HA"
     set mode a-p
-    set hbdev "port5" 50 "port6" 50
+    set hbdev "port5" 50 "dmz" 50      # Rettet fra port6 (som ikke findes) til dmz-porten
     set session-pickup enable
     set priority 200
     set monitor "port4" "wan1"
@@ -634,7 +634,7 @@ ip route 192.168.0.0 255.255.0.0 192.168.200.1
 
 ## 6. Proxmox VE Netværkskonfigurationsfil (`/etc/network/interfaces`) på Dell R630
 
-Dette es den faktiske, udeladelsesfrie konfigurationsfil, der skal installeres på din **Dell PowerEdge R630** fysiske server for at understøtte både **redundant host-management** (1G - eno3/eno4) og **redundant vlan-aware data-trunking** (10G - eno1/eno2).
+Dette er den faktiske, udeladelsesfrie konfigurationsfil, der skal installeres på din **Dell PowerEdge R630** fysiske server for at understøtte både **redundant host-management** (1G - eno3/eno4) og **redundant vlan-aware data-trunking** (10G - eno1/eno2).
 
 ```text
 # Loopback interface

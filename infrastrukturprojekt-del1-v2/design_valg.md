@@ -6,7 +6,7 @@ Dette dokument beskriver de arkitektoniske valg, overvejelser og tekniske design
 
 ## 1. Topologi- og Arkitekturvalg
 
-Netværksarkitekturen bygger på en robust **Collapsed Core** topologi, hvor inter-VLAN routing, redundans og sikkerhedsegregering er samlet i to centrale **Cisco Catalyst 3650 (L3)**.
+Netværksarkitekturen bygger på a robust **Collapsed Core** topologi, hvor inter-VLAN routing, redundans og sikkerhedsegregering er samlet i to centrale **Cisco Catalyst 3650 (L3)**.
 
 ```
                               +--------------------+
@@ -62,7 +62,7 @@ I denne version anvender vi **Statisk VRF Route Leaking** (VRF-Lite uden MP-BGP)
     *   Denne rute peger på FortiGates transit-IP, men vi tilføjer nøgleordet `global`. Dette fortæller routeren, at den skal kigge i den globale routingtabel for at finde næste hop:
         *   `ip route vrf VRF_ALFA 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global`
 2.  **Vej ind (Returruter):**
-    *   Returtrafikken lander i Global Routing Table på core-switchen. For at finde tilbage til kunden, tilføjes en statisk rute i Global Routing Table, der peger ind i kundens VRF-interface:
+    *   Returtrafikken lander i Global Routing Table på core-switchen. For at finde tilbage til kunden, tilføjes a statisk rute i Global Routing Table, der peger ind i kundens VRF-interface:
         *   `ip route 192.168.10.0 255.255.255.0 Vlan10 vrf VRF_ALFA`
 
 ---
@@ -78,8 +78,6 @@ I Proxmox VE (Debian Linux) navngives disse integrerede onboard-porte som henhol
 *   `eno2` (10 Gbit/s RJ45 - Port 2)
 *   `eno3` (1 Gbit/s RJ45 - Port 3)
 *   `eno4` (1 Gbit/s RJ45 - Port 4)
-
-*Bemærk: På visse Dell NDC'er kan rækkefølgen være omvendt, så 1G-portene er eno1/eno2, og 10G-portene er eno3/eno4. I denne konfiguration tager vi udgangspunkt i, at 10G-portene er eno1/eno2.*
 
 ### Fysisk Forbindelsesdesign (Cabling):
 1.  **Kunde/Data Forbindelse (10 Gbit/s RJ45):**

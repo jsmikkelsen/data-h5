@@ -309,10 +309,10 @@ ip route vrf VRF_BRAVO 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
 ip route vrf VRF_CHARLIE 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
 ip route vrf VRF_DELTA 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global
 !
-ip route 192.168.10.0 255.255.255.0 Vlan10 vrf VRF_ALFA
-ip route 192.168.20.0 255.255.255.0 Vlan20 vrf VRF_BRAVO
-ip route 192.168.30.0 255.255.255.0 Vlan30 vrf VRF_CHARLIE
-ip route 192.168.40.0 255.255.255.0 Vlan40 vrf VRF_DELTA
+ip route 192.168.10.0 255.255.255.0 VLAN10 vrf VRF_ALFA
+ip route 192.168.20.0 255.255.255.0 VLAN20 vrf VRF_BRAVO
+ip route 192.168.30.0 255.255.255.0 VLAN30 vrf VRF_CHARLIE
+ip route 192.168.40.0 255.255.255.0 VLAN40 vrf VRF_DELTA
 !
 ip route 0.0.0.0 0.0.0.0 192.168.101.1
 ```
@@ -321,7 +321,7 @@ ip route 0.0.0.0 0.0.0.0 192.168.101.1
 
 ## 3. acc-sw01 / acc-sw02 (Cisco Catalyst 2960X - Access Switches)
 
-Disse switche leverer L2-forbindelse til klienter, den fysiske server og foretager VLAN-segmentering. Konfigurationen er ens for begge switche (tilpas blot IP-adressen på SVI interface Vlan99).
+Disse switche leverer L2-forbindelse til klienter, den fysiske server og foretager VLAN-segmentering. WAN-segmenteringen (VLAN 200) er nu fjernet herfra, da kablingen er direkte.
 
 ```cisco
 hostname acc-sw01
@@ -340,8 +340,6 @@ vlan 40
  name Kunde_Delta_LAN
 vlan 99
  name Management_Net
-vlan 200
- name WAN_Transit_L2
 !
 spanning-tree mode rapid-pvst
 !
@@ -368,25 +366,9 @@ interface Port-channel 1
 !
 ! --- INTER-ACCESS TRUNK LINK ---
 interface range GigabitEthernet0/47 - 48
- description L2 trunk sync til acc-sw02 (VLAN 99 og 200)
- switchport trunk allowed vlan 99,200
+ description L2 trunk sync til acc-sw02 (VLAN 99)
+ switchport trunk allowed vlan 99
  switchport mode trunk
-!
-! --- WAN ROUTER PORT (VLAN 200) ---
-interface GigabitEthernet0/20
- description Forbindelse til Cisco 4331 WAN-router Gi0/0/0
- switchport access vlan 200
- switchport mode access
- spanning-tree portfast
- spanning-tree bpduguard enable
-!
-! --- FIREWALL WAN TRUNK PORTS (VLAN 200) ---
-interface GigabitEthernet0/24
- description Forbindelse til FortiGate-01 WAN-port
- switchport access vlan 200
- switchport mode access
- spanning-tree portfast
- spanning-tree bpduguard enable
 !
 ! --- ACCESS PORTE TIL KUNDER ---
 interface GigabitEthernet0/1
@@ -459,7 +441,7 @@ config system interface
         set vdom "root"
         set ip 192.168.200.1 255.255.255.248   # Opdateret maske til /29
         set allowaccess ping
-        set description "WAN-interface mod Cisco 4331 WAN Router"
+        set description "Direkte WAN-interface mod Cisco 4331 (BDI bridged)"
     next
     edit "port1"
         set vdom "root"
@@ -569,9 +551,11 @@ end
 
 ---
 
-## 5. wan-rt01 (Cisco ISR 4331 - Fuldstændig WAN/NAT Router)
+## 5. wan-rt01 (Cisco ISR 4331 - Fuldstændig WAN/NAT Router med L2 Bridging)
 
-Denne router agerer som din **fysiske internet gateway/ISP simulator**. Den modtager trafikken fra de to FortiGates via `Gi0/0/0` (forbundet til VLAN 200 på access-switchene), oversætter (NAT'er) alle de interne kunde-IP'er til sin egen ydre IP, og sender trafikken ud på skolen/hjemmets rigtige internetforbindelse via `Gi0/0/1`.
+Denne router agerer som din **fysiske internet gateway/ISP simulator**. Den er kablet **direkte** til WAN1-porten på begge dine firewalls via `Gi0/0/0` og `Gi0/0/2`. De to porte er software-bridged på routeren via **Bridge Domain (BDI1)**, så den aktive firewall kan overtage den delte WAN VIP `192.168.200.1` øjeblikkeligt.
+
+Routeren modtager kortsigtet eksternt internet på `Gi0/0/1` (via DHCP) og udfører NAT for hele dit interne `192.168.0.0/16` netværk.
 
 ```cisco
 ! --- SYSTEM ---
@@ -595,7 +579,7 @@ line vty 0 15
 !
 ip routing
 !
-! --- WAN INTERFACES ---
+! --- WAN INTERFACES & LAYER 2 BRIDGING (BDI) ---
 !
 ! GigabitEthernet0/0/1 forbindes til skolens/labbets rigtige internet (router/væg-stik)
 interface GigabitEthernet0/0/1
@@ -604,18 +588,38 @@ interface GigabitEthernet0/0/1
  ip nat outside                 ! Definerer dette som det ydre NAT interface
  no shutdown
 !
-! GigabitEthernet0/0/0 forbindes til VLAN 200 på din acc-sw01
+! GigabitEthernet0/0/0 forbindes DIREKTE til fg-ha-01 wan1 port
 interface GigabitEthernet0/0/0
- description WAN-forbindelse ind mod FortiGate HA cluster wan1
- ip address 192.168.200.2 255.255.255.248  ! Opdateret til /29 netværk
- ip nat inside                  ! Definerer dette som det indre NAT interface
+ description Direkte WAN-forbindelse til fg-ha-01 wan1 port
+ no ip address
+ negotiation auto
+ service instance 1 ethernet
+  encapsulation default
+  bridge-domain 1
+ no shutdown
+!
+! GigabitEthernet0/0/2 forbindes DIREKTE til fg-ha-02 wan1 port
+interface GigabitEthernet0/0/2
+ description Direkte WAN-forbindelse til fg-ha-02 wan1 port
+ no ip address
+ negotiation auto
+ service instance 1 ethernet
+  encapsulation default
+  bridge-domain 1
+ no shutdown
+!
+! Det virtuelle Bridge Domain interface (BDI) der agerer gateway for firewalls
+interface BDI1
+ description Bridge Domain interface til FortiGate WAN netvaerk
+ ip address 192.168.200.2 255.255.255.248  ! Fælles /29 IP i WAN netværket
+ ip nat inside                             ! Definerer dette som det indre NAT interface
  no shutdown
 !
 ! --- DUMMY INTERNET ADRESSE (TIL OFFLINE TEST) ---
 interface Loopback0
  description Simuleret ekstern DNS-server (Google DNS)
  ip address 8.8.8.8 255.255.255.255
- ip nat inside                  ! Tillader at Loopback betragtes som lokal ressource
+ ip nat inside
 !
 ! --- NAT / PAT OVERLOAD OPSÆTNING ---
 ! Access-list der tillader NAT for hele dit interne Klasse-B/C netværksblok (192.168.0.0/16)
@@ -626,7 +630,7 @@ ip access-list standard NAT_ACL
 ip nat inside source list NAT_ACL interface GigabitEthernet0/0/1 overload
 !
 ! --- STATISK ROUTING ---
-! Rute, der sender alt trafik til dit interne netværk tilbage til FortiGate HA Clusteret
+! Rute, der sender alt trafik til dit interne netværk tilbage til FortiGate HA Clusterets VIP
 ip route 192.168.0.0 255.255.0.0 192.168.200.1
 ```
 
@@ -634,7 +638,7 @@ ip route 192.168.0.0 255.255.0.0 192.168.200.1
 
 ## 6. Proxmox VE Netværkskonfigurationsfil (`/etc/network/interfaces`) på Dell R630
 
-Dette er den faktiske, udeladelsesfrie konfigurationsfil, der skal installeres på din **Dell PowerEdge R630** fysiske server for at understøtte både **redundant host-management** (1G - eno3/eno4) og **redundant vlan-aware data-trunking** (10G - eno1/eno2).
+Dette er den faktiske, udeladelsesfrie konfigurationsfil, der skal installeres på din **Dell PowerEdge R630** fysiske server for at understøtte både **redundant host-management** (1G - eno3/eno4) og **redundant vlan-aware data-opening** (10G - eno1/eno2).
 
 ```text
 # Loopback interface

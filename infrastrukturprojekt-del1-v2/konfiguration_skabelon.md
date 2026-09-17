@@ -340,6 +340,8 @@ vlan 40
  name Kunde_Delta_LAN
 vlan 99
  name Management_Net
+vlan 200
+ name WAN_Transit_L2
 !
 spanning-tree mode rapid-pvst
 !
@@ -363,6 +365,28 @@ interface Port-channel 1
  description Bundled Trunk til Core
  switchport trunk allowed vlan 10,20,30,40,99
  switchport mode trunk
+!
+! --- INTER-ACCESS TRUNK LINK ---
+interface range GigabitEthernet0/47 - 48
+ description L2 trunk sync til acc-sw02 (VLAN 99 og 200)
+ switchport trunk allowed vlan 99,200
+ switchport mode trunk
+!
+! --- WAN ROUTER PORT (VLAN 200) ---
+interface GigabitEthernet0/20
+ description Forbindelse til Cisco 4331 WAN-router Gi0/0/0
+ switchport access vlan 200
+ switchport mode access
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+! --- FIREWALL WAN TRUNK PORTS (VLAN 200) ---
+interface GigabitEthernet0/24
+ description Forbindelse til FortiGate-01 WAN-port
+ switchport access vlan 200
+ switchport mode access
+ spanning-tree portfast
+ spanning-tree bpduguard enable
 !
 ! --- ACCESS PORTE TIL KUNDER ---
 interface GigabitEthernet0/1
@@ -433,9 +457,9 @@ config system interface
     next
     edit "wan1"
         set vdom "root"
-        set ip 192.168.200.1 255.255.255.252
+        set ip 192.168.200.1 255.255.255.248   # Opdateret maske til /29
         set allowaccess ping
-        set description "WAN-interface mod Cisco 4331 ISP Router"
+        set description "WAN-interface mod Cisco 4331 WAN Router"
     next
     edit "port1"
         set vdom "root"
@@ -481,6 +505,7 @@ end
 
 # --- FIREWALL POLICIES ---
 config firewall policy
+    # Tillad Kunde Alfa internetadgang med NAT
     edit 10
         set name "Kunde-Alfa-to-Internet"
         set srcintf "port4"
@@ -492,6 +517,7 @@ config firewall policy
         set service "ALL"
         set nat enable
     next
+    # Tillad Kunde Bravo internetadgang med NAT
     edit 20
         set name "Kunde-Bravo-to-Internet"
         set srcintf "port4"
@@ -503,6 +529,7 @@ config firewall policy
         set service "ALL"
         set nat enable
     next
+    # Tillad Kunde Charlie internetadgang med NAT
     edit 30
         set name "Kunde-Charlie-to-Internet"
         set srcintf "port4"
@@ -514,6 +541,7 @@ config firewall policy
         set service "ALL"
         set nat enable
     next
+    # Tillad Kunde Delta internetadgang med NAT
     edit 40
         set name "Kunde-Delta-to-Internet"
         set srcintf "port4"
@@ -525,6 +553,7 @@ config firewall policy
         set service "ALL"
         set nat enable
     next
+    # Sikkerhedsregel: Hård blokering af trafik fra Kunde-miljøer til Management-miljøet
     edit 90
         set name "Block-Customers-to-Management"
         set srcintf "port4"
@@ -540,25 +569,64 @@ end
 
 ---
 
-## 5. wan-rt01 (Cisco ISR 4331 - WAN/ISP Simulator)
+## 5. wan-rt01 (Cisco ISR 4331 - Fuldstændig WAN/NAT Router)
 
-Denne router modtager trafikken fra FortiGate WAN-interfacet og sender den videre til simuleret internet (f.eks. Google DNS), og routes tilbage til det samlede virksomhedsmiljø.
+Denne router agerer som din **fysiske internet gateway/ISP simulator**. Den modtager trafikken fra de to FortiGates via `Gi0/0/0` (forbundet til VLAN 200 på access-switchene), oversætter (NAT'er) alle de interne kunde-IP'er til sin egen ydre IP, og sender trafikken ud på skolen/hjemmets rigtige internetforbindelse via `Gi0/0/1`.
 
 ```cisco
+! --- SYSTEM ---
 hostname wan-rt01
 !
 enable secret admin123
 !
-interface GigabitEthernet0/0/0
- description WAN-forbindelse mod FortiGate HA wan1
- ip address 192.168.200.2 255.255.255.252
+username admin privilege 15 secret admin123
+!
+ip domain-name isp.dk
+ip ssh version 2
+!
+line con 0
+ exec-timeout 5 0
+ logging synchronous
+line vty 0 15
+ login local
+ transport input ssh
+ exec-timeout 5 0
+ logging synchronous
+!
+ip routing
+!
+! --- WAN INTERFACES ---
+!
+! GigabitEthernet0/0/1 forbindes til skolens/labbets rigtige internet (router/væg-stik)
+interface GigabitEthernet0/0/1
+ description Uplink mod rigtigt internet (Fysisk uplink mod skole/hjemme-LAN)
+ ip address dhcp                ! Modtager automatisk en IP-adresse og default route fra dit LAN
+ ip nat outside                 ! Definerer dette som det ydre NAT interface
  no shutdown
 !
-interface Loopback0
- description Simuleret ekstern ressource (Google DNS / Root-server)
- ip address 8.8.8.8 255.255.255.255
+! GigabitEthernet0/0/0 forbindes til VLAN 200 på din acc-sw01
+interface GigabitEthernet0/0/0
+ description WAN-forbindelse ind mod FortiGate HA cluster wan1
+ ip address 192.168.200.2 255.255.255.248  ! Opdateret til /29 netværk
+ ip nat inside                  ! Definerer dette som det indre NAT interface
+ no shutdown
 !
-! --- ROUTING ---
+! --- DUMMY INTERNET ADRESSE (TIL OFFLINE TEST) ---
+interface Loopback0
+ description Simuleret ekstern DNS-server (Google DNS)
+ ip address 8.8.8.8 255.255.255.255
+ ip nat inside                  ! Tillader at Loopback betragtes som lokal ressource
+!
+! --- NAT / PAT OVERLOAD OPSÆTNING ---
+! Access-list der tillader NAT for hele dit interne Klasse-B/C netværksblok (192.168.0.0/16)
+ip access-list standard NAT_ACL
+ permit 192.168.0.0 0.0.255.255
+!
+! Etabler dynamisk NAT (PAT Overload) ud af din internet-forbundne port
+ip nat inside source list NAT_ACL interface GigabitEthernet0/0/1 overload
+!
+! --- STATISK ROUTING ---
+! Rute, der sender alt trafik til dit interne netværk tilbage til FortiGate HA Clusteret
 ip route 192.168.0.0 255.255.0.0 192.168.200.1
 ```
 
@@ -566,7 +634,7 @@ ip route 192.168.0.0 255.255.0.0 192.168.200.1
 
 ## 6. Proxmox VE Netværkskonfigurationsfil (`/etc/network/interfaces`) på Dell R630
 
-Dette er den faktiske, udeladelsesfrie konfigurationsfil, der skal installeres på din **Dell PowerEdge R630** fysiske server for at understøtte både **redundant host-management** (1G - eno3/eno4) og **redundant vlan-aware data-trunking** (10G - eno1/eno2).
+Dette es den faktiske, udeladelsesfrie konfigurationsfil, der skal installeres på din **Dell PowerEdge R630** fysiske server for at understøtte både **redundant host-management** (1G - eno3/eno4) og **redundant vlan-aware data-trunking** (10G - eno1/eno2).
 
 ```text
 # Loopback interface

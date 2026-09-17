@@ -46,10 +46,13 @@ Disse adresser bor i **Global Routing Table (GRT)** eller i ydre WAN-zoner:
     *   **core-sw02 IP:** `192.168.101.3`
     *   **Core VIP (HSRP i GRT):** `192.168.101.4` (bruges som default gateway for 3650-switchene til at sende uidentificeret trafik mod firewallen).
 
-2.  **Transit Edge til WAN (Mellem FortiGate HA og Cisco 4331):**
-    *   **Netværk:** `192.168.200.0/30` (Subnetmaske: `255.255.255.252`)
+2.  **Transit Edge til WAN (Mellem FortiGate HA og Cisco 4331 WAN-router):**
+    *   **Netværk:** `192.168.200.0/29` (Subnetmaske: `255.255.255.248`)
+    *   *Bemærk: Vi anvender et `/29` subnet her for at give tilstrækkelig plads til, at både den delte HA VIP, de to fysiske FortiGate WAN-interfaces og Cisco 4331 kan bo på samme netværk.*
     *   **FortiGate HA VIP (Ekstern):** `192.168.200.1`
-    *   **Cisco 4331 IP (WAN):** `192.168.200.2`
+    *   **Cisco 4331 IP (WAN Interface Gi0/0/0):** `192.168.200.2`
+    *   **FortiGate-01 Fysisk WAN-IP (Valgfri):** `192.168.200.3`
+    *   **FortiGate-02 Fysisk WAN-IP (Valgfri):** `192.168.200.4`
 
 3.  **L3 Link core-sw01 to core-sw02 (Backplane/Routing Sync):**
     *   **Netværk:** `192.168.255.0/30` (Subnetmaske: `255.255.255.252`)

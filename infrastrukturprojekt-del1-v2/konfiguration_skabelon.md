@@ -471,28 +471,29 @@ end
 
 ---
 
-## 5. Proxmox VE Netværkskonfigurationsfil (`/etc/network/interfaces`)
+## 5. Proxmox VE Netværkskonfigurationsfil (`/etc/network/interfaces`) på Dell R630
 
-Dette er den faktiske konfigurationsfil, der skal installeres på din fysiske server for at understøtte både ** redundant host-management** (1G) og ** redundant vlan-aware data-trunking** (10G).
+Dette er den faktiske konfigurationsfil, der skal installeres på din **Dell PowerEdge R630** fysiske server for at understøtte både ** redundant host-management** (1G - eno3/eno4) og ** redundant vlan-aware data-trunking** (10G - eno1/eno2).
 
 ```text
 # Loopback interface
 auto lo
 iface lo inet loopback
 
-# 1G Fysiske kort (Management & OOB)
+# Dell NDC Intel X540/I350 Ethernet Interfaces:
+# Port 1 & 2 (10 Gbit/s RJ45) -> eno1 & eno2
 iface eno1 inet manual
 iface eno2 inet manual
 
-# 10G Fysiske kort (Kunde/Data trunk)
-iface ens1f0 inet manual
-iface ens1f1 inet manual
+# Port 3 & 4 (1 Gbit/s RJ45) -> eno3 & eno4
+iface eno3 inet manual
+iface eno4 inet manual
 
 # --- MANAGMENT NETVÆRK (VLAN 99) ---
-# Vi samler de to 1G kort i en redundant backup-forbindelse
+# Vi samler de to onboard 1G kort i en redundant backup-forbindelse
 auto bond1
 iface bond1 inet manual
-	bond-slaves eno1 eno2
+	bond-slaves eno3 eno4
 	bond-miimon 100
 	bond-mode active-backup
 
@@ -508,10 +509,10 @@ iface vmbr99 inet static
 	comment "Proxmox Host Management IP - VLAN 99"
 
 # --- KUNDE DATA TRUNK NETVÆRK ---
-# Vi samler de to 10G kort i en høj-hastigheds LACP bond
+# Vi samler de to onboard 10G kobber-kort i en høj-hastigheds LACP bond
 auto bond0
 iface bond0 inet manual
-	bond-slaves ens1f0 ens1f1
+	bond-slaves eno1 eno2
 	bond-miimon 100
 	bond-mode 802.3ad
 	bond-xmit-hash-policy layer2+3

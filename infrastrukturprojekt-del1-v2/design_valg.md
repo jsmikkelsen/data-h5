@@ -1,6 +1,6 @@
 # Netværksdesign, Redundans og Statisk VRF Leaking (v2)
 
-Dette dokument beskriver de arkitektoniske valg, overvejelser og tekniske designprincipper bag opbygningen af den fælles netværksplatform for **Infrastrukturprojekt – Del 1 (v2)**, med særligt fokus på **Statisk VRF Route Leaking** samt integration og administration af **Proxmox VE**.
+Dette dokument beskriver de arkitektoniske valg, overvejelser og tekniske designprincipper bag opbygningen af den fælles netværksplatform for **Infrastrukturprojekt – Del 1 (v2)**, med særligt fokus på **Statisk VRF Route Leaking** samt integration og administration af **Proxmox VE** på en **Dell PowerEdge R630**.
 
 ---
 
@@ -38,7 +38,7 @@ Netværksarkitekturen bygger på en robust **Collapsed Core** topologi, hvor int
              |    acc-sw01    |===================|    acc-sw02    | (Cisco 2960X Access)
              +----------------+    L2 Trunk       +----------------+
                     |                                     |
-              [ Klienter ]                           [ Proxmox VE ]
+              [ Klienter ]                        [ Dell R630 Proxmox ]
 ```
 
 ---
@@ -61,48 +61,58 @@ I denne version anvender vi **Statisk VRF Route Leaking** (VRF-Lite uden MP-BGP)
     *   For at give kunderne adgang til internettet (som findes i Global Routing Table via transit-VLAN 101 og FortiGate), tilføjer vi en statisk default-route inde i kundens VRF.
     *   Denne rute peger på FortiGates transit-IP, men vi tilføjer nøgleordet `global`. Dette fortæller routeren, at den skal kigge i den globale routingtabel for at finde næste hop:
         *   `ip route vrf VRF_ALFA 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global`
-2.  **Vej tilbage til VRF (Global til Kunde):**
-    *   Returtrafikken (f.eks. svar på internetsøgninger eller trafik fra Shared Services) lander i Global Routing Table på core-switchen. For at finde tilbage til kunden, tilføjes en statisk rute i Global Routing Table, der peger ind i kundens VRF:
-        *   `ip route 192.168.10.0 255.255.255.0 Vlan10 192.168.10.2 vrf VRF_ALFA`
-3.  **Hvorfor dette er sikkert:**
-    *   Selvom Kunde Alfa og Kunde Bravo begge har en default route ud til Global Routing Table, tillader switchen *ikke* direkte routing mellem VRF'erne. Trafik fra `VRF_ALFA` kan kun sendes til interfaces, der eksisterer i dens egen VRF, eller specifikt til det angivne næste hop i GRT (`192.168.101.1` - FortiGate). Firewallen (FortiGate) kontrollerer derefter strengt, at trafikken ikke må routes på tværs af kundenetværkene.
+2.  **Vej ind (Returruter):**
+    *   Returtrafikken lander i Global Routing Table på core-switchen. For at finde tilbage til kunden, tilføjes en statisk rute i Global Routing Table, der peger ind i kundens VRF-interface:
+        *   `ip route 192.168.10.0 255.255.255.0 Vlan10 vrf VRF_ALFA`
 
 ---
 
-## 4. Proxmox VE Netværks- og Administrationsdesign
+## 4. Dell PowerEdge R630 & Proxmox VE Design
 
-Den fysiske server skal køre **Proxmox VE** hypervisor og fungere som vært for virtuelle maskiner (VM'er) og containere (LXC) for de forskellige kundemiljøer. Det er afgørende for sikkerheden, at hypervisorens eget administrationsinterface (GUI/API på port 8006) er fuldstændigt isoleret fra kundernes trafik.
+Den fysiske server er en **Dell PowerEdge R630** udstyret med et integreret Network Daughter Card (NDC), som leverer:
+*   **2 x 10 Gbit/s RJ45** kobber-porte (typisk Intel X540-T2)
+*   **2 x 1 Gbit/s RJ45** kobber-porte (typisk Intel I350-T2)
+
+I Proxmox VE (Debian Linux) navngives disse integrerede onboard-porte som henholdsvis:
+*   `eno1` (10 Gbit/s RJ45 - Port 1)
+*   `eno2` (10 Gbit/s RJ45 - Port 2)
+*   `eno3` (1 Gbit/s RJ45 - Port 3)
+*   `eno4` (1 Gbit/s RJ45 - Port 4)
+
+*Bemærk: På visse Dell NDC'er kan rækkefølgen være omvendt, så 1G-portene er eno1/eno2, og 10G-portene er eno3/eno4. I denne konfiguration tager vi udgangspunkt i, at 10G-portene er eno1/eno2.*
 
 ### Fysisk Forbindelsesdesign (Cabling):
-Serveren tilsluttes redundant for at undgå single points of failure:
-1.  **2 x 10 Gbit/s Interfaces (Data/Kunde-Trunk):**
-    *   Forbindes med 10G fiber/DAC-kabler direkte ind i Core-switchene:
-        *   1 kabel til `core-sw01` (Port f.eks. Te1/0/1)
-        *   1 kabel til `core-sw02` (Port f.eks. Te1/0/1)
-    *   På switches konfigureres disse porte som en redundant trunk-port (fysiske porte, der tillader VLAN 10, 20, 30, 40).
-2.  **4 x 1 Gbit/s Interfaces (Management & Out-of-Band):**
-    *   To interfaces bruges til **Proxmox Host Management** og forbindes redundant til de to Cisco 2960X access-switche (port sat til **Access VLAN 99**).
-    *   Et interface kan reserveres til serverens out-of-band management kort (f.eks. HP iLO / Dell iDRAC), som ligeledes placeres på en access-port i **VLAN 99 (Management)**.
+1.  **Kunde/Data Forbindelse (10 Gbit/s RJ45):**
+    *   **`eno1` (10G)** forbindes til `core-sw01` (f.eks. port `Te1/0/1`).
+    *   **`eno2` (10G)** forbindes til `core-sw02` (f.eks. port `Te1/0/1`).
+    *   Disse to 10G kobber-porte konfigureres i Proxmox som et **LACP (802.3ad) Bond** og opsættes som en **VLAN-Aware trunk** mod Core-switchene. Dette sikrer 20 Gbit/s aggregeret båndbredde samt komplet switch-redundans for alle kundernes VM'er (VLAN 10, 20, 30, 40).
+2.  **Management / Vært Forbindelse (1 Gbit/s RJ45):**
+    *   **`eno3` (1G)** forbindes til access-switchen `acc-sw01` (port konfigureret som **Access VLAN 99**).
+    *   **`eno4` (1G)** forbindes til access-switchen `acc-sw02` (port konfigureret som **Access VLAN 99**).
+    *   Disse to 1G porte konfigureres som en **Active-Backup Bond** i Proxmox for at sikre redundant administrationsadgang til hypervisoren på **VLAN 99 (Management)**.
+3.  **Out-of-Band (Dell iDRAC Enterprise):**
+    *   Dell R630 har en **dedikeret fysisk iDRAC-port** placeret på bagsiden (markeret med en skruenøgle).
+    *   Denne port forbindes direkte til en af dine Cisco 2960X access-switche på en port konfigureret som **Access VLAN 99**. 
+    *   Dette giver dig fuld remote-konsol og hardware-overvågning (iDRAC GUI) uafhængigt af, om Proxmox kører eller ej.
 
-### Logisk Netværkskonfiguration i Proxmox (Linux Bridges):
-
-I Proxmox konfigureres to Linux Bridges via webgrænsefladen (`/etc/network/interfaces`):
+### Logisk Netværkskonfiguration i Proxmox:
 
 ```
                                   +------------------------------+
-                                  |         Proxmox VE           |
+                                  |     Dell PowerEdge R630      |
                                   |                              |
   +------------------+            |  +------------------------+  |
-  |  Management-Net  |------------+--| vmbr99 (SVI/Host Mgmt) |  | <-- Port 8006 (Kun tilgængelig her)
-  |    (VLAN 99)     | (1G Link)  |  | IP: 192.168.99.100/24  |  |
+  |  Management-Net  |------------+--| vmbr99 (SVI/Host Mgmt) |  | <-- Proxmox Web GUI (:8006)
+  |    (VLAN 99)     | (1G Links) |  | IP: 192.168.99.100/24  |  |
   +------------------+            |  +------------------------+  |
+                                  |        (eno3 + eno4 Bond)    |
                                   |                              |
-                                  |  +------------------------+  |
-                                  |  | vmbr0 (VLAN Aware LACP)|  |
-  +------------------+            |  | Trunk mod Core 3650    |  |
-  |  Kunde VLAN-Trunk|============+==| (LACP Bond - 2x10G)    |  |
-  |  VLAN 10,20,30,40| (10G Links)|  +-----------+------------+  |
-  +------------------+            |              |               |
+  +------------------+            |  +------------------------+  |
+  |  Kunde VLAN-Trunk|============+==| vmbr0 (VLAN Aware LACP)|  |
+  |  VLAN 10,20,30,40| (10G Links)|  | Trunk mod Core 3650    |  |
+  +------------------+            |  +------------------------+  |
+                                  |        (eno1 + eno2 Bond)    |
+                                  |                              |
                                   |    +---------+---------+     |
                                   |    |         |         |     |
                                   |  [VM 1]    [VM 2]    [VM 3]  |
@@ -111,14 +121,8 @@ I Proxmox konfigureres to Linux Bridges via webgrænsefladen (`/etc/network/inte
 ```
 
 1.  **`vmbr99` (Host Management Bridge):**
-    *   Tilknyttes det fysiske 1G netværkskort (f.eks. `eno1`), som er forbundet til access-switchens VLAN 99 port.
-    *   Proxmox-værtens administrations-IP tildeles her: `192.168.99.100/24`.
-    *   Dette sikrer, at Proxmox host-operativsystemet (og Web GUI) kun kan nås fra administrationsnetværket (`VRF_MGMT`), og er fuldstændigt afskåret fra kundenetværkene.
+    *   Proxmox-værtens administrations-IP tildeles her: `192.168.99.100/24` (Gateway: `192.168.99.1`).
+    *   Da denne IP bor i `VRF_MGMT`, er administrationsinterfacet på port 8006 helt usynligt og utilgængeligt for de virtuelle maskiner i kundenetværkene.
 2.  **`vmbr0` (Kunde Data Bridge - VLAN Aware):**
-    *   De to fysiske 10G kort (f.eks. `ens1f0` og `ens1f1`) samles i en Linux Bond (`bond0`) med mode **LACP (802.3ad)**.
-    *   Der oprettes en Linux Bridge (`vmbr0`) ovenpå `bond0`, og indstillingen **VLAN Aware** aktiveres.
-    *   Broen tildeles *ingen* IP-adresse på Proxmox-vært-niveau. Den fungerer udelukkende som en virtuel Layer 2 switch.
-3.  **VM/LXC Allokering:**
-    *   Når der oprettes en virtuel maskine til f.eks. **Kunde Alfa**, tilknyttes dens netværkskort til `vmbr0`, og i feltet **VLAN Tag** indtastes `10`.
-    *   Når maskinen starter, vil dens trafik automatisk blive tagget med VLAN 10 og sendt ud over 10G LACP-forbindelsen til Core-switchene, hvor den rammer `VRF_ALFA` og default gateway `192.168.10.1`.
-    *   Kunderne kan således aldrig opsnappe eller se hinandens trafik inde i hypervisoren, da Proxmox' bridge-sikkerhed forhindrer pakke-leaking mellem VLANs.
+    *   `eno1` og `eno2` (10G) samles i en LACP bond.
+    *   Bridge-vlan-aware aktiveres, så vi kan køre Kunde Alfa (VLAN 10), Kunde Bravo (VLAN 20), Kunde Charlie (VLAN 30) og Kunde Delta (VLAN 40) virtuelt isoleret direkte ned på portene.

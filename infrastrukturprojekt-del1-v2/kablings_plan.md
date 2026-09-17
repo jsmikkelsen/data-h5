@@ -1,6 +1,6 @@
 # Fysisk Kablingsplan (v2)
 
-Dette dokument indeholder den fulde fysiske kablingsplan for **Infrastrukturprojekt – Del 1 (v2)**. Kablingsplanen beskriver præcist, hvilke kabler der skal trækkes mellem din **Dell PowerEdge R630**, de to **FortiGates**, **Cisco 4331 WAN-routeren** og deine **switche** i labbet for at sikre fuldstændig redundans uden single points of failure (SPOF).
+Dette dokument indeholder den fulde fysiske kablingsplan for **Infrastrukturprojekt – Del 1 (v2)**. Kablingsplanen beskriver præcist, hvilke kabler der skal trækkes mellem din **Dell PowerEdge R630**, de to **FortiGates**, **Cisco 4331 WAN-routeren** og dine **switche** i labbet for at sikre fuldstændig redundans uden single points of failure (SPOF).
 
 ---
 
@@ -9,7 +9,7 @@ Dette dokument indeholder den fulde fysiske kablingsplan for **Infrastrukturproj
 For at forbinde det redundante **FortiGate HA Cluster (Active/Passive)** til den **enkelte Cisco 4331 WAN-router**, anvender vi en intelligent Layer 2 løsning:
 *   Vi opretter et dedikeret **VLAN 200 (WAN Transit)** på dine to Cisco 2960X access-switche.
 *   Både FortiGate 1, FortiGate 2 og Cisco 4331 WAN-routeren forbindes til dette VLAN 200.
-*   Dette tillader, at den aktive FortiGate altid har Layer 2 forbindelse til WAN-routeren, og ved et failover overtager den passive FortiGate ubesværet WAN IP-adressen uden fysisk omkobling.
+*   Dette tillader, at den aktive FortiGate altid har Layer 2 forbindelse to WAN-routeren, og ved et failover overtager den passive FortiGate ubesværet WAN IP-adressen uden fysisk omkobling.
 
 ---
 
@@ -20,8 +20,8 @@ Brug denne tabel som din direkte tjekliste, når du står i serverrummet eller l
 | Kilde Enhed | Kilde Port | Destination Enhed | Destination Port | Kabeltype | Funktion / VLAN | Noter |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **wan-rt01** (4331) | `Gi0/0/0` | **acc-sw01** | `Gi0/20` | Cat6 RJ45 (Grå) | VLAN 200 (WAN) | Forbinder WAN-router mod det fælles WAN-VLAN |
-| **fg-ha-01** (FG60F) | `port5` | **fg-ha-02** | `port5` | Cat6 RJ45 (Rød) | Heartbeat 1 (HA Sync)| HA synkroniserings-kabel (Direkte) |
-| **fg-ha-01** (FG60F) | `dmz` | **fg-ha-02** | `dmz` | Cat6 RJ45 (Rød) | Heartbeat 2 (HA Sync)| Sekundært HA synkroniserings-kabel (Direkte - erstatter non-existent port6) |
+| **fg-ha-01** (FG60F) | `a` | **fg-ha-02** | `a` | Cat6 RJ45 (Rød) | Heartbeat 1 (HA Sync)| HA synkroniserings-kabel (Fysisk FortiLink Port A) |
+| **fg-ha-01** (FG60F) | `b` | **fg-ha-02** | `b` | Cat6 RJ45 (Rød) | Heartbeat 2 (HA Sync)| Sekundært HA synkroniserings-kabel (Fysisk FortiLink Port B) |
 | **fg-ha-01** (FG60F) | `wan1` | **acc-sw01** | `Gi0/24` | Cat6 RJ45 (Grå) | VLAN 200 (WAN) | Forbinder primær firewall til WAN-VLAN |
 | **fg-ha-02** (FG60F) | `wan1` | **acc-sw02** | `Gi0/24` | Cat6 RJ45 (Grå) | VLAN 200 (WAN) | Forbinder sekundær firewall til WAN-VLAN |
 | **fg-ha-01** (FG60F) | `port4` | **core-sw01** | `Gi1/1/1` | Cat6 RJ45 (Blå) | VLAN 101 (Int. Transit)| Forbinder primær firewall til Core 1 |

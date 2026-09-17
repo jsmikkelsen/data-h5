@@ -6,7 +6,7 @@ Dette dokument beskriver de arkitektoniske valg, overvejelser og tekniske design
 
 ## 1. Topologi- og Arkitekturvalg
 
-Netværksarkitekturen bygger på a robust **Collapsed Core** topologi, hvor inter-VLAN routing, redundans og sikkerhedsegregering er samlet i to centrale **Cisco Catalyst 3650 (L3)**.
+Netværksarkitekturen bygger på en robust **Collapsed Core** topologi, hvor inter-VLAN routing, redundans og sikkerhedsegregering er samlet i to centrale **Cisco Catalyst 3650 (L3)**.
 
 ```
                               +--------------------+
@@ -62,7 +62,7 @@ I denne version anvender vi **Statisk VRF Route Leaking** (VRF-Lite uden MP-BGP)
     *   Denne rute peger på FortiGates transit-IP, men vi tilføjer nøgleordet `global`. Dette fortæller routeren, at den skal kigge i den globale routingtabel for at finde næste hop:
         *   `ip route vrf VRF_ALFA 0.0.0.0 0.0.0.0 Vlan101 192.168.101.1 global`
 2.  **Vej ind (Returruter):**
-    *   Returtrafikken lander i Global Routing Table på core-switchen. For at finde tilbage til kunden, tilføjes a statisk rute i Global Routing Table, der peger ind i kundens VRF-interface:
+    *   Returtrafikken lander i Global Routing Table på core-switchen. For at finde tilbage to kunden, tilføjes en statisk rute i Global Routing Table, der peger ind i kundens VRF-interface:
         *   `ip route 192.168.10.0 255.255.255.0 Vlan10 vrf VRF_ALFA`
 
 ---

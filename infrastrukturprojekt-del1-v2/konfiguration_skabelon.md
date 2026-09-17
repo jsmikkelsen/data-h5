@@ -441,7 +441,7 @@ config system ha
     set group-id 1
     set group-name "Netic-Core-HA"
     set mode a-p
-    set hbdev "port5" 50 "dmz" 50      # Rettet fra port6 (som ikke findes) til dmz-porten
+    set hbdev "a" 50 "b" 50             # Konfigureret til at bruge de to fysiske FortiLink interfaces (a & b)
     set session-pickup enable
     set priority 200
     set monitor "port4" "wan1"

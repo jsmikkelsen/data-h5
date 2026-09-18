@@ -506,7 +506,7 @@ end
 config global
 config system ha
     set group-id 1
-    set group-name "Netic-Core-HA"
+    set group-name "Core-HA"
     set mode a-p
     set hbdev "a" 50 "b" 50             # HA synkronisering trækkes på FortiLink a & b
     set session-pickup enable

@@ -465,30 +465,25 @@ ip route vrf vrf-management 0.0.0.0 0.0.0.0 10.9.99.1 name management
 
 ---
 
-## 4. fg-01 & fg-02 (FortiGate 60F - HA VDOM, Aggregate & Inter-VDOM routing)
+## 4. fg-01 (FortiGate 60F - Primary / Active Firewall)
 
-Dette er den komplette konfiguration for dine to FortiGates, opsat med **Multi-VDOM** til at matche Cisco VRF'erne. 
+Dette er den **fulde og uafhængige** startkonfiguration for din primære firewall. 
 
-For at synkroniseringen fungerer fejlfrit, er de to fysiske LACP aggregate-forbindelser defineret symmetrisk:
-*   `ds-01-aggregate` (port1 & port2) ➔ Forbundet til `ds-01`
-*   `ds-02-aggregate` (port3 & port4) ➔ Forbundet til `ds-02`
-
-Internet-adgang formidles via en central **`root` VDOM**, som har direkte kabling til WAN-routeren og modtager trafikken fra kunde-VDOM'erne via virtuelle **Inter-VDOM Links**.
+Da dette er den **Active** enhed, defineres al logik (VDOMs, Interfaces, LACP aggregater, VDOM links, statisk routing og sikkerhedspolitikker) her. Når HA heartbeat etableres, synkroniseres alt dette automatisk 1:1 til `fg-02`.
 
 ```fortinet
 # ==============================================================================
-# DEL A: GLOBALE INDSTILLINGER & VDOMS (Udføres i Global kontekst)
+# 1. GLOBALE INDSTILLINGER, VDOMS & HA (Fysisk chassis specifik)
 # ==============================================================================
 
-# --- AKTIVER MULTI-VDOM TILSTAND ---
 config system global
+    set hostname "fg-01"
     set vdom-mode multi-vdom
-    set hostname "fg-01"               # Indtast "fg-02" på den sekundære enhed
 end
 
-# --- DEFINER KUNDE- OG MANAGEMENT VDOMS ---
+# Opret VDOM-kontekster til at matche Cisco VRF'er
 config vdom
-    edit "root"                        # Bruges til WAN, BDI internet og inter-vdom formidling
+    edit "root"
     next
     edit "alfa"
     next
@@ -502,19 +497,23 @@ config vdom
     next
 end
 
-# --- DEFINE HA CLUSTERING ---
+# Konfigurer HA Clustering (fg-01 prioriteres som Master vha. priority 200)
 config global
 config system ha
     set group-id 1
     set group-name "Core-HA"
     set mode a-p
-    set hbdev "a" 50 "b" 50             # HA synkronisering trækkes på FortiLink a & b
+    set hbdev "a" 50 "b" 50             # HA sync kører direkte på FortiLink-portene a & b
     set session-pickup enable
-    set priority 200                   # Sæt til 100 på den sekundære firewall fg-02
+    set priority 200                   # Høj prioritet sikrer Master-rollen
     set monitor "port1" "port2" "port3" "port4" "wan1"
 end
 
-# --- OPRET REDUNDANTE LACP LACP AGGREGATER MOD SWITCHES ---
+# ==============================================================================
+# 2. INTERFACES & AGGREGATES MOD SWITCHES (Configureres i Global)
+# ==============================================================================
+
+# Opret LACP bundles mod de to distribution switches
 config system interface
     edit "ds-01-link"
         set vdom "root"
@@ -530,7 +529,7 @@ config system interface
     next
 end
 
-# --- OPRET INTER-VDOM LINKS (Virtuelle kabler på tværs af VDOMs) ---
+# Opret Inter-VDOM links (Virtuelle kabler på tværs af VDOMs)
 config system vdom-link
     edit "vl-alfa"
         set type ethernet
@@ -549,15 +548,20 @@ config system vdom-link
     next
 end
 
-# --- ALLOKER INTERFACES TIL VDOMS ---
+# Alloker fysiske interfaces og VLAN-tags til de korrekte VDOM'er
 config system interface
-    # WAN porten placeres i root VDOM
     edit "wan1"
         set vdom "root"
         set ip 192.168.200.1 255.255.255.248
         set allowaccess ping
     next
-    # SVI Transit links mod ds-01 tilknyttes de respektive VDOMs
+    edit "port1"
+        set vdom "root"
+        set ip 192.168.99.254 255.255.255.0
+        set allowaccess ping ssh https gui
+        set description "Out-of-band management"
+    next
+    # SVI Symmetrisk Transit til ds-01 (VLAN 910-999)
     edit "ds-01-link.910"
         set vdom "alfa"
         set ip 10.10.10.1 255.255.255.248
@@ -593,7 +597,7 @@ config system interface
         set interface "ds-01-link"
         set vlanid 999
     next
-    # SVI Transit links mod ds-02 tilknyttes de respektive VDOMs
+    # SVI Symmetrisk Transit til ds-02 (VLAN 910-999)
     edit "ds-02-link.910"
         set vdom "alfa"
         set ip 10.9.10.1 255.255.255.248
@@ -629,64 +633,73 @@ config system interface
         set interface "ds-02-link"
         set vlanid 999
     next
-    # VDOM Link interfaces allokeres parvis
-    edit "vl-alfa0"
-        set vdom "root"
-    next
+    # Virtuelle Inter-VDOM links (Kunde/Mgmt side)
     edit "vl-alfa1"
         set vdom "alfa"
         set ip 172.16.10.1 255.255.255.252
         set allowaccess ping
-    next
-    edit "vl-bravo0"
-        set vdom "root"
     next
     edit "vl-bravo1"
         set vdom "bravo"
         set ip 172.16.20.1 255.255.255.252
         set allowaccess ping
     next
-    edit "vl-charlie0"
-        set vdom "root"
-    next
     edit "vl-charlie1"
         set vdom "charlie"
         set ip 172.16.30.1 255.255.255.252
         set allowaccess ping
-    next
-    edit "vl-delta0"
-        set vdom "root"
     next
     edit "vl-delta1"
         set vdom "delta"
         set ip 172.16.40.1 255.255.255.252
         set allowaccess ping
     next
-    edit "vl-mgmt0"
-        set vdom "root"
-    next
     edit "vl-mgmt1"
         set vdom "management"
         set ip 172.16.99.1 255.255.255.252
+        set allowaccess ping
+    next
+    # Virtuelle Inter-VDOM links (Root / WAN side)
+    edit "vl-alfa0"
+        set vdom "root"
+        set ip 172.16.10.2 255.255.255.252
+        set allowaccess ping
+    next
+    edit "vl-bravo0"
+        set vdom "root"
+        set ip 172.16.20.2 255.255.255.252
+        set allowaccess ping
+    next
+    edit "vl-charlie0"
+        set vdom "root"
+        set ip 172.16.30.2 255.255.255.252
+        set allowaccess ping
+    next
+    edit "vl-delta0"
+        set vdom "root"
+        set ip 172.16.40.2 255.255.255.252
+        set allowaccess ping
+    next
+    edit "vl-mgmt0"
+        set vdom "root"
+        set ip 172.16.99.2 255.255.255.252
         set allowaccess ping
     next
 end
 end
 
 # ==============================================================================
-# DEL B: VDOM ROUTING & SIKKERHEDSPOLITIKKER (Udføres i de enkelte VDOMs)
+# 3. KUNDE & MANAGEMENT VDOM INDSTILLINGER (Routing & Policies)
 # ==============================================================================
 
-# --- VDOM ALFA ---
+# --- VDOM ALFA (Kunde Alfa) ---
 config vdom
 edit "alfa"
 config router static
-    # Default route peger på den anden ende af VDOM-linket i Root
     edit 1
         set gateway 172.16.10.2
         set device "vl-alfa1"
     next
-    # Returruter ind mod switches (husk at dække begge transitter!)
     edit 2
         set dst 192.168.10.0 255.255.255.0
         set gateway 10.10.10.2
@@ -699,9 +712,8 @@ config router static
     next
 end
 config firewall policy
-    # Tillad al udgående kildetrafik ud af VDOM-linket til internettet
     edit 1
-        set name "Alfa-to-WAN-Link"
+        set name "Alfa-Transit-to-VDOM-Link"
         set srcintf "ds-01-link.910" "ds-02-link.910"
         set dstintf "vl-alfa1"
         set srcaddr "all"
@@ -713,7 +725,7 @@ config firewall policy
 end
 next
 
-# --- VDOM BRAVO ---
+# --- VDOM BRAVO (Kunde Bravo) ---
 edit "bravo"
 config router static
     edit 1
@@ -733,7 +745,7 @@ config router static
 end
 config firewall policy
     edit 1
-        set name "Bravo-to-WAN-Link"
+        set name "Bravo-Transit-to-VDOM-Link"
         set srcintf "ds-01-link.920" "ds-02-link.920"
         set dstintf "vl-bravo1"
         set srcaddr "all"
@@ -745,7 +757,7 @@ config firewall policy
 end
 next
 
-# --- VDOM CHARLIE ---
+# --- VDOM CHARLIE (Kunde Charlie) ---
 edit "charlie"
 config router static
     edit 1
@@ -765,7 +777,7 @@ config router static
 end
 config firewall policy
     edit 1
-        set name "Charlie-to-WAN-Link"
+        set name "Charlie-Transit-to-VDOM-Link"
         set srcintf "ds-01-link.930" "ds-02-link.930"
         set dstintf "vl-charlie1"
         set srcaddr "all"
@@ -777,7 +789,7 @@ config firewall policy
 end
 next
 
-# --- VDOM DELTA ---
+# --- VDOM DELTA (Kunde Delta) ---
 edit "delta"
 config router static
     edit 1
@@ -797,7 +809,7 @@ config router static
 end
 config firewall policy
     edit 1
-        set name "Delta-to-WAN-Link"
+        set name "Delta-Transit-to-VDOM-Link"
         set srcintf "ds-01-link.940" "ds-02-link.940"
         set dstintf "vl-delta1"
         set srcaddr "all"
@@ -809,7 +821,7 @@ config firewall policy
 end
 next
 
-# --- VDOM MANAGEMENT ---
+# --- VDOM MANAGEMENT (Administration) ---
 edit "management"
 config router static
     edit 1
@@ -829,7 +841,7 @@ config router static
 end
 config firewall policy
     edit 1
-        set name "Mgmt-to-WAN-Link"
+        set name "Mgmt-Transit-to-VDOM-Link"
         set srcintf "ds-01-link.999" "ds-02-link.999"
         set dstintf "vl-mgmt1"
         set srcaddr "all"
@@ -842,39 +854,16 @@ end
 next
 
 # ==============================================================================
-# DEL C: CENTRAL ROOT VDOM (Formidling af NAT & WAN egress)
+# 4. CENTRAL EGRESS ROOT VDOM INDSTILLINGER (NAT & Default WAN routing)
 # ==============================================================================
 edit "root"
-# Sæt IPs på root-siden af VDOM-links
-config system interface
-    edit "vl-alfa0"
-        set ip 172.16.10.2 255.255.255.252
-        set allowaccess ping
-    next
-    edit "vl-bravo0"
-        set ip 172.16.20.2 255.255.255.252
-        set allowaccess ping
-    next
-    edit "vl-charlie0"
-        set ip 172.16.30.2 255.255.255.252
-        set allowaccess ping
-    next
-    edit "vl-delta0"
-        set ip 172.16.40.2 255.255.255.252
-        set allowaccess ping
-    next
-    edit "vl-mgmt0"
-        set ip 172.16.99.2 255.255.255.252
-        set allowaccess ping
-    next
-end
 config router static
-    # Default route i root peger direkte på Cisco 4331 WAN gateway over BDI
+    # Default route peger direkte på Cisco 4331 over BDI-interfacet
     edit 1
         set gateway 192.168.200.2
         set device "wan1"
     next
-    # Returruter til kundenetværkene ind gennem de respektive VDOM-links
+    # Returruter ind gennem de respektive VDOM links
     edit 2
         set dst 192.168.10.0 255.255.255.0
         set device "vl-alfa0"
@@ -897,7 +886,7 @@ config router static
     next
 end
 config firewall policy
-    # Tillad og NAT (PAT Overload) trafikken ud mod internettet for hver enkelt kunde VDOM
+    # NAT og PAT Overload politikker for alle kunders VDOM links ud mod WAN
     edit 10
         set name "alfa-internet-egress"
         set srcintf "vl-alfa0"
@@ -959,7 +948,40 @@ end
 
 ---
 
-## 5. wan-rt01 (Cisco ISR 4331 - Fuldstændig WAN/NAT Router med L2 Bridging)
+## 5. fg-02 (FortiGate 60F - Secondary / Standby Firewall - Bootstrap Opsætning)
+
+Dette er den **fulde og uafhængige** startkonfiguration for din sekundære firewall. 
+
+I et **FortiGate Active/Passive cluster (FGCP)** skal du **IKKE** konfigurere VDOMs, IP-adresser eller politikker manuelt på den sekundære enhed. Den sekundære enhed skal udelukkende bootstrappes med sit eget HA-chassis setup. 
+
+Så snart du har indtastet denne korte bootstrap-config på `fg-02` og forbinder Heartbeat-kablerne (Port `a` til `a` og `b` til `b`), vil `fg-02` automatisk registrere Master-enheden (`fg-01`), nulstille sine egne lokale indstillinger, og **synkronisere samtlige VDOM'er, interfaces, koder og regler 100% automatisk fra fg-01**.
+
+```fortinet
+# ==============================================================================
+# 1. GENEREL INITIAL OPSÆTNING & HA BOOTSTRAP (Udføres i Global)
+# ==============================================================================
+
+config system global
+    set hostname "fg-02"               # Unikt lokalt HA chassis-navn
+    set vdom-mode multi-vdom
+end
+
+# Konfigurer HA Clustering (fg-02 tildeles priority 100 for at agere Standby)
+config global
+config system ha
+    set group-id 1
+    set group-name "Core-HA"            # Skal matche fg-01 100%
+    set mode a-p                       # Active-Passive tilstand
+    set hbdev "a" 50 "b" 50             # HA heartbeat kables præcis som fg-01 (Port a & b)
+    set session-pickup enable          # Synkroniserer aktive TCP tabeller fra fg-01
+    set priority 100                   # Sættes lavere end fg-01 (200) for at sikre Standby-rolle
+    set monitor "port1" "port2" "port3" "port4" "wan1"
+end
+```
+
+---
+
+## 6. wan-rt01 (Cisco ISR 4331 - Fuldstændig WAN/NAT Router med L2 Bridging)
 
 Denne router agerer som din **fysiske internet gateway/ISP simulator**. Den er kablet **direkte** til WAN1-porten på begge dine firewalls via de to hosliggende porte **`Gi0/0/0`** og **`Gi0/0/1`**. De to porte er software-bridged på routeren via **Bridge Domain (BDI1)**, så den aktive firewall kan overtage den delte WAN VIP `192.168.200.1` øjeblikkeligt.
 
@@ -1023,7 +1045,7 @@ interface BDI1
  ip nat inside                             ! Definerer dette som det indre NAT interface
  no shutdown
 !
-! --- DUMMY INTERNET ADRESSE (TIL OFFSINE TEST) ---
+! --- DUMMY INTERNET ADRESSE (TIL OFFLINE TEST) ---
 interface Loopback0
  description Simuleret ekstern DNS-server (Google DNS)
  ip address 8.8.8.8 255.255.255.255
@@ -1044,7 +1066,7 @@ ip route 192.168.0.0 255.255.0.0 192.168.200.1
 
 ---
 
-## 6. Proxmox VE Netværkskonfigurationsfil (`/etc/network/interfaces`) på Dell R630
+## 7. Proxmox VE Netværkskonfigurationsfil (`/etc/network/interfaces`) på Dell R630
 
 Dette er den faktiske, udeladelsesfrie konfigurationsfil, der skal installeres på din **Dell PowerEdge R630** fysiske server for at understøtte både **redundant host-management** (1G - eno3/eno4) og **redundant vlan-aware data-opening** (10G - eno1/eno2).
 

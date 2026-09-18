@@ -1,12 +1,12 @@
-# Netværksdesign, Redundans og Statisk VRF Leaking (v2)
+# Netværksdesign, Redundans og Statisk VRF Leaking (v2 - Custom Mesh Design)
 
-Dette dokument beskriver de arkitektoniske valg, overvejelser og tekniske designprincipper bag opbygningen af den fælles netværksplatform for **Infrastrukturprojekt – Del 1 (v2)**, med særligt fokus på **Direkte WAN-forbindelse**, **Statisk VRF Route Leaking** samt integration og administration af **Proxmox VE** på en **Dell PowerEdge R630**.
+Dette dokument beskriver de arkitektoniske valg, overvejelser og tekniske designprincipper bag opbygningen af den fælles netværksplatform for **Infrastrukturprojekt – Del 1 (v2)**, med særligt fokus på dit **Custom Cross-Mesh LAN-kablingsdesign**, **Statisk VRF Route Leaking** samt integration og administration af **Proxmox VE** på en **Dell PowerEdge R630**.
 
 ---
 
 ## 1. Topologi- og Arkitekturvalg
 
-Netværksarkitekturen bygger på en robust **Collapsed Core** topologi, hvor inter-VLAN routing, redundans og sikkerhedsegregering er samlet i to centrale **Cisco Catalyst 3650 (L3)**.
+Netværksarkitekturen bygger på dit avancerede, fuldt redundante **Custom Cross-Mesh LAN-kablingsdesign**, som giver maksimal oppetid og eliminerer ethvert single point of failure (SPOF) på tværs af switche og firewalls:
 
 ```
                             [ Skole/Hjemme-LAN (Internet) ]
@@ -19,13 +19,13 @@ Netværksarkitekturen bygger på en robust **Collapsed Core** topologi, hvor int
                                        | (192.168.200.2) |
                                        |                 |
                                     [ wan1 ]          [ wan1 ]
-                             [ FortiGate 60F - 1 ]==========HA (Port a & b)==========[ FortiGate 60F - 2 ]
-                                   [ port4 ]                                           [ port4 ]
-                                       |                                                   |
-                                       | (192.168.101.2 /29)                               | (192.168.101.3 /29)
-                                       |                                                   |
-                                 [ Gi1/1/1 ]                                         [ Gi1/1/1 ]
-                             [ Cisco 3650 core-sw01 ]====Inter-Core L3 (Gi1/1/2)====[ Cisco 3650 core-sw02 ]
+                             [ FortiGate fg-01 ]============HA (Port a & b)============[ FortiGate fg-02 ]
+                             [ port1/2 ]   [ port3/4 ]                           [ port3/4 ]   [ port1/2 ]
+                                 |             \                                     /             |
+                                 |  (Gul)       \ (Rød)                       (Gul) /       (Rød)  |
+                                 |               \                                 /               |
+                            [ Gi1/0/24-23 ] [ Gi1/0/22-21 ]                   [ Gi1/0/22-21 ] [ Gi1/0/24-23 ]
+                            [  Cisco 3650 ds-01   ]========ISL LACP (Gi1/0/20-19)========[  Cisco 3650 ds-02   ]
                                  [ Port-Channel 1 ]                                  [ Port-Channel 1 ]
                                        ||                                                  ||
                                        || (LACP Trunk VLAN 10,20,30,40,99)                 ||
@@ -43,14 +43,14 @@ Netværksarkitekturen bygger på en robust **Collapsed Core** topologi, hvor int
                                        +-------------------+   +---------------------------+
                                        | (10G Customer Trunk LACP)                         |
                                  [ Te1/0/1 ]                                         [ Te1/0/1 ]
-                             [ Cisco 3650 core-sw01 ]                                [ Cisco 3650 core-sw02 ]
+                             [  Cisco 3650 ds-01  ]                                  [  Cisco 3650 ds-02  ]
 ```
 
 ### Enhedernes Roller:
-1.  **Cisco Catalyst 3650 (Core/Distribution):** Fungerer som inter-VLAN gateway (SVI). Switchene huser alle kunde-VRF'er samt management-VRF, og det er her, den interne Layer 3 adskillelse og route-leaking foregår.
-2.  **Cisco Catalyst 2960X (Access):** Leverer fysisk tilslutning (access-porte) til klienter, testmaskiner og servere på de korrekte VLANs (VLAN 10, 20, 30, 40 og 99). WAN-trafikken (VLAN 200) er fjernet fra access-switchene, hvilket isolerer internet-trafikken fuldstændigt til kant-enhederne.
-3.  **FortiGate 60F (Edge/Firewall):** Placeret som et redundant par i **Active/Passive HA cluster** (FGCP). De kører synkronisering (heartbeat) direkte mellem deres fysiske **FortiLink-porte `a` og `b`**.
-4.  **Cisco ISR 4331 (WAN Router):** Forbundet direkte til WAN1-interfacerne på begge FortiGates. Den agerer din fysiske internet-forbindelse og simulerer din ISP.
+1.  **Cisco Catalyst 3650 (`ds-01` & `ds-02`):** De to Layer 3 distribution switches fungerer som netværkets centrale Collapsed Core. De huser alle gateways (SVI), HSRP og VRF'er og foretager inter-switch LACP EtherChannel-routing på `Gi1/0/19` og `Gi1/0/20`.
+2.  **Cisco Catalyst 2960X (Access):** Leverer fysiske access-porte til klienter og management på VLAN 10, 20, 30, 40 og 99. De forbindes redundant til begge L3 switches med LACP trunks.
+3.  **FortiGate 60F (`fg-01` & `fg-02`):** Trækker direkte parvise HA-heartbeat links på FortiLink-portene **`a`** og **`b`**. De kables redundant og mønstret direkte til begge L3 switches.
+4.  **Cisco ISR 4331 (`wan-rt01`):** Internet/ISP gateway kablet direkte til firewalls vha. BDI software-bridging på port `Gi0/0/0` og `Gi0/0/1`, samt NAT på `Gi0/0/2`.
 
 ---
 
@@ -64,13 +64,30 @@ For at fjerne behovet for eksterne switche på WAN-siden og kable routeren **dir
 *   Vi konfigurerer de to hosliggende og fysisk grupperede porte, **`GigabitEthernet0/0/0`** og **`GigabitEthernet0/0/1`**, som Layer 2 bridged interfaces.
 *   De to porte tildeles til **`bridge-domain 1`** via Service Instances i Cisco IOS-XE.
 *   Vi opretter et virtuelt **Bridge Domain Interface (`BDI1`)**, som tildeles WAN-gateway IP'en `192.168.200.2/29`.
-*   Dette omdanner routerens to porte til en indbygget Layer 2 switch. `Gi0/0/0` forbindes direkte til `fg-ha-01` (`wan1`), og `Gi0/0/1` forbindes direkte til `fg-ha-02` (`wan1`).
+*   Dette omdanner routerens to porte til en indbygget Layer 2 switch. `Gi0/0/0` forbindes direkte til `fg-01` (`wan1`), og `Gi0/0/1` forbindes direkte til `fg-02` (`wan1`).
 *   Den fysiske internetforbindelse (skolens/labbets netværk) routes ud af den selvstændige port **`GigabitEthernet0/0/2`** (NAT Outside via DHCP).
 *   Når FortiGate-clusteret laver et failover og flytter den virtuelle eksterne MAC-adresse, fanges det øjeblikkeligt af Cisco-routerens integrerede bro-tabel, og trafikken flyttes automatisk uden tab af sessioner eller ping-forbindelse.
 
 ---
 
-## 3. Statisk VRF Route Leaking Design
+## 3. FortiGate Redundant Interface LAN Design
+
+I dit avancerede kablingsdesign er hver firewall cross-connected direkte til begge distribution switches:
+*   `fg-01` `port1` & `port2` ➔ `ds-01`
+*   `fg-01` `port3` & `port4` ➔ `ds-02`
+*   `fg-02` `port1` & `port2` ➔ `ds-02`
+*   `fg-02` `port3` & `port4` ➔ `ds-01`
+
+Siden `ds-01` og `ds-02` ikke kører stacking (hvilket ville tillade én tværgående LACP EtherChannel på tværs af kasserne), ville almindelig paralleltilkobling skabe gigantiske Layer 3 IP-konflikter og routing-løkker. 
+
+Dette løses ekstremt elegant ved at oprette et **Redundant Interface** i FortiOS (f.eks. kaldet `internal-transit`):
+1.  Vi samler de fire fysiske LAN-porte (`port1`, `port2`, `port3`, `port4`) under dette ene virtuelle interface.
+2.  Et **Redundant Interface** i FortiOS fungerer i en stærk **Active-Backup** tilstand på MAC/port-niveau. Det betyder, at firewallen kun tillader aktiv trafik på ét/to af linkene ad gangen (f.eks. `port1` & `port2` mod `ds-01`), mens de resterende links (`port3` & `port4` mod `ds-02`) holdes i en varm standby-tilstand.
+3.  Hvis kablet til `ds-01` trækkes ud, eller hvis `ds-01` slukkes, detekterer firewallen link-fejlen og aktiverer øjeblikkeligt sine standby-porte mod `ds-02`. Trafikken genoptages øjeblikkeligt helt uden afbrydelse.
+
+---
+
+## 4. Statisk VRF Route Leaking Design
 
 I denne version anvender vi **Statisk VRF Route Leaking** (VRF-Lite uden MP-BGP). Det er en ekstremt pålidelig og ressourcebesparende metode til at dele specifikke ruter mellem de isolerede VRF-routingtabeller og **Global Routing Table (GRT)**.
 
@@ -85,7 +102,7 @@ I denne version anvender vi **Statisk VRF Route Leaking** (VRF-Lite uden MP-BGP)
 
 ---
 
-## 4. Dell PowerEdge R630 & Proxmox VE Design
+## 5. Dell PowerEdge R630 & Proxmox VE Design
 
 Den fysiske server er en **Dell PowerEdge R630** udstyret med et integreret Network Daughter Card (NDC), som leverer:
 *   **2 x 10 Gbit/s RJ45** kobber-porte (typisk Intel X540-T2)
@@ -99,8 +116,8 @@ I Proxmox VE (Debian Linux) navngives disse integrerede onboard-porte som henhol
 
 ### Fysisk Forbindelsesdesign (Cabling):
 1.  **Kunde/Data Forbindelse (10 Gbit/s RJ45):**
-    *   **`eno1` (10G)** forbindes to `core-sw01` (Te1/0/1).
-    *   **`eno2` (10G)** forbindes to `core-sw02` (Te1/0/1).
+    *   **`eno1` (10G)** forbindes til `ds-01` (port `Te1/0/1`).
+    *   **`eno2` (10G)** forbindes til `ds-02` (port `Te1/0/1`).
     *   Disse to 10G kobber-porte konfigureres i Proxmox som et **LACP (802.3ad) Bond** og opsættes som en **VLAN-Aware trunk** mod Core-switchene. Dette sikrer 20 Gbit/s aggregeret båndbredde samt komplet switch-redundans for alle kundernes VM'er (VLAN 10, 20, 30, 40).
 2.  **Management / Vært Forbindelse (1 Gbit/s RJ45):**
     *   **`eno3` (1G)** forbindes til access-switchen `acc-sw01` (port `Gi0/10` - VLAN 99).

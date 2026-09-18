@@ -4,13 +4,13 @@ Dette dokument indeholder de komplette, udeladelsesfrie, produktionsklare og ful
 
 ---
 
-## 1. core-sw01 (Cisco Catalyst 3650 - Primær Core)
+## 1. ds-01 (Cisco Catalyst 3650 - Primær Core/Distribution Switch)
 
 Denne switch agerer Active Gateway for **VLAN 10 (Kunde Alfa)**, **VLAN 20 (Kunde Bravo)** samt **VLAN 99 (Management)**, og Standby Gateway for VLAN 30 (Charlie) og VLAN 40 (Delta).
 
 ```cisco
 ! --- SYSTEM & MANAGEMENT ---
-hostname core-sw01
+hostname ds-01
 !
 enable secret 5 $1$mERf$hx5g76Y1A1vL1v3fG4yv11
 !
@@ -76,7 +76,7 @@ interface Vlan10
  standby 10 ip 192.168.10.1
  standby 10 priority 110
  standby 10 preempt
- standby 10 track GigabitEthernet1/1/1 20
+ standby 10 track Port-channel1 20
 !
 interface Vlan20
  ip vrf forwarding VRF_BRAVO
@@ -85,7 +85,7 @@ interface Vlan20
  standby 20 ip 192.168.20.1
  standby 20 priority 110
  standby 20 preempt
- standby 20 track GigabitEthernet1/1/1 20
+ standby 20 track Port-channel1 20
 !
 interface Vlan30
  ip vrf forwarding VRF_CHARLIE
@@ -113,23 +113,41 @@ interface Vlan99
 !
 ! --- TRANSIT TIL EDGE (GLOBAL ROUTING TABLE) ---
 interface Vlan101
- description Forbindelse mod FortiGate Edge Cluster (GRT)
+ description Forbindelse mod FortiGate HA cluster VIP (GRT)
  ip address 192.168.101.2 255.255.255.248
  standby version 2
  standby 101 ip 192.168.101.4
  standby 101 priority 110
  standby 101 preempt
- standby 101 track GigabitEthernet1/1/1 20
+ standby 101 track Port-channel1 20
 !
-! --- INTER-CORE ROUTING LINK ---
+! --- INTER-CORE LACP ISL LINK MOD DS-02 ---
+interface range GigabitEthernet1/0/19 - 20
+ description Inter-Switch Link mod ds-02
+ switchport trunk allowed vlan 10,20,30,40,99,101
+ switchport mode trunk
+ channel-group 1 mode active
+!
+interface Port-channel 1
+ description redundant LACP ISL mod ds-02
+ switchport trunk allowed vlan 10,20,30,40,99,101
+ switchport mode trunk
+!
+! --- DEDIKERET ROUTING LINK MOD DS-02 ---
 interface GigabitEthernet1/1/2
- description Inter-Core L3 link til core-sw02
+ description Inter-Core L3 link til ds-02
  no switchport
  ip address 192.168.255.1 255.255.255.252
 !
-! --- UPLINK PORT MOD FORTIGATE (L2 TRUNK) ---
-interface GigabitEthernet1/1/1
- description Uplink mod FortiGate Edge cluster Port 4
+! --- CONNECTIONS MOD FORTIGATE FG-01 ---
+interface range GigabitEthernet1/0/23 - 24
+ description Forbindelse mod fg-01 (port1 & port2)
+ switchport trunk allowed vlan 101
+ switchport mode trunk
+!
+! --- CONNECTIONS MOD FORTIGATE FG-02 (CROSS-LINKS) ---
+interface range GigabitEthernet1/0/21 - 22
+ description Cross-connection mod fg-02 (port3 & port4)
  switchport trunk allowed vlan 101
  switchport mode trunk
 !
@@ -138,9 +156,9 @@ interface range GigabitEthernet1/0/1 - 2
  description LACP Trunk mod acc-sw01
  switchport trunk allowed vlan 10,20,30,40,99
  switchport mode trunk
- channel-group 1 mode active
+ channel-group 2 mode active
 !
-interface Port-channel 1
+interface Port-channel 2
  description Port-Channel mod acc-sw01
  switchport trunk allowed vlan 10,20,30,40,99
  switchport mode trunk
@@ -164,13 +182,13 @@ ip route 0.0.0.0 0.0.0.0 192.168.101.1
 
 ---
 
-## 2. core-sw02 (Cisco Catalyst 3650 - Sekundær Core)
+## 2. ds-02 (Cisco Catalyst 3650 - Sekundær Core/Distribution Switch)
 
 Denne switch agerer Active Gateway for **VLAN 30 (Kunde Charlie)** og **VLAN 40 (Kunde Delta)**, og Standby Gateway for VLAN 10 (Alfa), 20 (Bravo) og 99 (Management).
 
 ```cisco
 ! --- SYSTEM & MANAGEMENT ---
-hostname core-sw02
+hostname ds-02
 !
 enable secret 5 $1$mERf$hx5g76Y1A1vL1v3fG4yv11
 !
@@ -251,7 +269,7 @@ interface Vlan30
  standby 30 ip 192.168.30.1
  standby 30 priority 110
  standby 30 preempt
- standby 30 track GigabitEthernet1/1/1 20
+ standby 30 track Port-channel1 20
 !
 interface Vlan40
  ip vrf forwarding VRF_DELTA
@@ -260,7 +278,7 @@ interface Vlan40
  standby 40 ip 192.168.40.1
  standby 40 priority 110
  standby 40 preempt
- standby 40 track GigabitEthernet1/1/1 20
+ standby 40 track Port-channel1 20
 !
 interface Vlan99
  ip vrf forwarding VRF_MGMT
@@ -272,22 +290,40 @@ interface Vlan99
 !
 ! --- TRANSIT TIL EDGE (GLOBAL ROUTING TABLE) ---
 interface Vlan101
- description Forbindelse mod FortiGate Edge Cluster (GRT)
+ description Forbindelse mod FortiGate HA cluster VIP (GRT)
  ip address 192.168.101.3 255.255.255.248
  standby version 2
  standby 101 ip 192.168.101.4
  standby 101 priority 100
  standby 10 preempt
 !
-! --- INTER-CORE ROUTING LINK ---
+! --- INTER-CORE LACP ISL LINK MOD DS-01 ---
+interface range GigabitEthernet1/0/19 - 20
+ description Inter-Switch Link mod ds-01
+ switchport trunk allowed vlan 10,20,30,40,99,101
+ switchport mode trunk
+ channel-group 1 mode active
+!
+interface Port-channel 1
+ description redundant LACP ISL mod ds-01
+ switchport trunk allowed vlan 10,20,30,40,99,101
+ switchport mode trunk
+!
+! --- DEDIKERET ROUTING LINK MOD DS-01 ---
 interface GigabitEthernet1/1/2
- description Inter-Core L3 link til core-sw01
+ description Inter-Core L3 link til ds-01
  no switchport
  ip address 192.168.255.2 255.255.255.252
 !
-! --- UPLINK PORT MOD FORTIGATE ---
-interface GigabitEthernet1/1/1
- description Uplink mod FortiGate Edge cluster Port 4
+! --- CONNECTIONS MOD FORTIGATE FG-02 ---
+interface range GigabitEthernet1/0/23 - 24
+ description Forbindelse mod fg-02 (port1 & port2)
+ switchport trunk allowed vlan 101
+ switchport mode trunk
+!
+! --- CONNECTIONS MOD FORTIGATE FG-01 (CROSS-LINKS) ---
+interface range GigabitEthernet1/0/21 - 22
+ description Cross-connection mod fg-01 (port3 & port4)
  switchport trunk allowed vlan 101
  switchport mode trunk
 !
@@ -296,9 +332,9 @@ interface range GigabitEthernet1/0/1 - 2
  description LACP Trunk mod acc-sw02
  switchport trunk allowed vlan 10,20,30,40,99
  switchport mode trunk
- channel-group 1 mode active
+ channel-group 2 mode active
 !
-interface Port-channel 1
+interface Port-channel 2
  description Port-Channel mod acc-sw02
  switchport trunk allowed vlan 10,20,30,40,99
  switchport mode trunk
@@ -321,7 +357,7 @@ ip route 0.0.0.0 0.0.0.0 192.168.101.1
 
 ## 3. acc-sw01 / acc-sw02 (Cisco Catalyst 2960X - Access Switches)
 
-Disse switche leverer L2-forbindelse til klienter, den fysiske server og foretager VLAN-segmentering. WAN-segmenteringen (VLAN 200) er nu fjernet herfra, da kablingen er direkte.
+Disse switche leverer L2-forbindelse til klienter, den fysiske server og foretager VLAN-segmentering. WAN-segmenteringen (VLAN 200) er nu helt fjernet herfra, da kablingen er direkte.
 
 ```cisco
 hostname acc-sw01
@@ -354,7 +390,7 @@ ip default-gateway 192.168.99.1
 !
 ! --- TRUNK PORTE MOD CORE (LACP ETHERCHANNEL) ---
 interface range GigabitEthernet0/49 - 50
- description Redundant trunk mod core-sw01
+ description Redundant trunk mod ds-01
  switchport trunk allowed vlan 10,20,30,40,99
  switchport mode trunk
  channel-group 1 mode active
@@ -410,14 +446,14 @@ interface range GigabitEthernet0/10 - 11
 
 ---
 
-## 4. fg-ha (FortiGate 60F - HA Active/Passive Cluster)
+## 4. fg-01 & fg-02 (FortiGate 60F - HA Active/Passive Cluster i Redundant LAN Design)
 
-FortiGate-konfigurationen samler de to enheder i et synkroniseret Active/Passive cluster og tildeler IP-adresser, ruter, adresse-objekter og firewall-regler.
+FortiGate-konfigurationen samler de to enheder i et synkroniseret Active/Passive cluster. For at understøtte dit cross-mesh LAN design, samles `port1`, `port2`, `port3`, og `port4` i et enkelt logisk **Redundant Interface**, hvilket eliminerer L3 loop-risiko.
 
 ```fortinet
 # --- HA CLUSTERING OPSÆTNING ---
 config system global
-    set hostname "fg-ha-cluster"
+    set hostname "fg-01"               # Sæt til fg-02 på den sekundære firewall
 end
 config system ha
     set group-id 1
@@ -425,17 +461,25 @@ config system ha
     set mode a-p
     set hbdev "a" 50 "b" 50             # Konfigureret til at bruge de to fysiske FortiLink interfaces (a & b)
     set session-pickup enable
-    set priority 200
-    set monitor "port4" "wan1"
+    set priority 200                   # Sæt til 100 på den sekundære firewall
+    set monitor "port1" "port2" "port3" "port4" "wan1"
+end
+
+# --- REDUNDANT INTERFACE LAN CONFIGURATION (LØKKESIKRING) ---
+config system redundant-interface
+    edit "internal-transit"
+        set vdom "root"
+        set member "port1" "port2" "port3" "port4"
+        set allowaccess ping ssh https
+    end
 end
 
 # --- SYSTEM INTERFACES & ADRESSERING ---
 config system interface
-    edit "port4"
+    edit "internal-transit"
         set vdom "root"
         set ip 192.168.101.1 255.255.255.248
-        set allowaccess ping ssh https
-        set description "Intern transit mod Cisco 3650 Core (GRT)"
+        set description "Redundant LAN transit-aggregate mod ds-01 og ds-02"
     next
     edit "wan1"
         set vdom "root"
@@ -460,8 +504,8 @@ config router static
     next
     edit 2
         set dst 192.168.0.0 255.255.0.0
-        set gateway 192.168.101.4
-        set device "port4"
+        set gateway 192.168.101.4          # Peger på Core-switchenes HSRP VIP i GRT
+        set device "internal-transit"       # Sendes ud af det redundante interface
         set comment "Statisk rute til det samlede interne netværksmiljø"
     next
 end
@@ -490,7 +534,7 @@ config firewall policy
     # Tillad Kunde Alfa internetadgang med NAT
     edit 10
         set name "Kunde-Alfa-to-Internet"
-        set srcintf "port4"
+        set srcintf "internal-transit"      # Kilde er det redundante LAN-interface
         set dstintf "wan1"
         set srcaddr "Kunde-Alfa-LAN"
         set dstaddr "all"
@@ -502,7 +546,7 @@ config firewall policy
     # Tillad Kunde Bravo internetadgang med NAT
     edit 20
         set name "Kunde-Bravo-to-Internet"
-        set srcintf "port4"
+        set srcintf "internal-transit"
         set dstintf "wan1"
         set srcaddr "Kunde-Bravo-LAN"
         set dstaddr "all"
@@ -514,7 +558,7 @@ config firewall policy
     # Tillad Kunde Charlie internetadgang med NAT
     edit 30
         set name "Kunde-Charlie-to-Internet"
-        set srcintf "port4"
+        set srcintf "internal-transit"
         set dstintf "wan1"
         set srcaddr "Kunde-Charlie-LAN"
         set dstaddr "all"
@@ -526,7 +570,7 @@ config firewall policy
     # Tillad Kunde Delta internetadgang med NAT
     edit 40
         set name "Kunde-Delta-to-Internet"
-        set srcintf "port4"
+        set srcintf "internal-transit"
         set dstintf "wan1"
         set srcaddr "Kunde-Delta-LAN"
         set dstaddr "all"
@@ -538,7 +582,7 @@ config firewall policy
     # Sikkerhedsregel: Hård blokering af trafik fra Kunde-miljøer til Management-miljøet
     edit 90
         set name "Block-Customers-to-Management"
-        set srcintf "port4"
+        set srcintf "internal-transit"
         set dstintf "port1"
         set srcaddr "all"
         set dstaddr "Management-Net"
@@ -588,9 +632,9 @@ interface GigabitEthernet0/0/2
  ip nat outside                 ! Definerer dette som det ydre NAT interface
  no shutdown
 !
-! GigabitEthernet0/0/0 forbindes DIREKTE til fg-ha-01 wan1 port
+! GigabitEthernet0/0/0 forbindes DIREKTE til fg-01 wan1 port
 interface GigabitEthernet0/0/0
- description Direkte WAN-forbindelse til fg-ha-01 wan1 port
+ description Direkte WAN-forbindelse til fg-01 wan1 port
  no ip address
  negotiation auto
  service instance 1 ethernet
@@ -598,9 +642,9 @@ interface GigabitEthernet0/0/0
   bridge-domain 1
  no shutdown
 !
-! GigabitEthernet0/0/1 forbindes DIREKTE til fg-ha-02 wan1 port
+! GigabitEthernet0/0/1 forbindes DIREKTE til fg-02 wan1 port
 interface GigabitEthernet0/0/1
- description Direkte WAN-forbindelse til fg-ha-02 wan1 port
+ description Direkte WAN-forbindelse til fg-02 wan1 port
  no ip address
  negotiation auto
  service instance 1 ethernet
@@ -630,7 +674,7 @@ ip access-list standard NAT_ACL
 ip nat inside source list NAT_ACL interface GigabitEthernet0/0/2 overload
 !
 ! --- STATISK ROUTING ---
-! Rute, der sender alt trafik til dit interne netværk tilbage to FortiGate HA Clusterets VIP
+! Rute, der sender alt trafik til dit interne netværk tilbage mod FortiGate HA Clusterets VIP
 ip route 192.168.0.0 255.255.0.0 192.168.200.1
 ```
 

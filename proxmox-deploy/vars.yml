@@ -1,0 +1,78 @@
+# ==============================================================================
+# CONFIGURATION VARIABLES FOR PROXMOX DEPLOYMENT
+# ==============================================================================
+
+# --- Proxmox REST API Forbindelse ---
+proxmox_api_host: "192.168.1.100"      # IP eller hostname på din Proxmox server
+proxmox_api_user: "root@pam"             # API Bruger (f.eks. root@pam eller en dedikeret admin@pve)
+proxmox_node: "pve"                      # Navnet på din Proxmox node (ses i venstre side i Web UI)
+proxmox_validate_certs: false            # Sæt til false hvis du bruger selvsignerede certifikater (standard)
+
+# --- Godkendelse (Autentificering) ---
+# Du kan enten bruge password (A) ELLER API Token (B - anbefalet).
+# Fjern udkommentering for den metode du ønsker at bruge.
+
+# Metode A: Password godkendelse
+proxmox_api_password: "DinProxmoxAdgangskodeHer"
+
+# Metode B: API Token (Fjern # for at aktivere og udkommenter password ovenfor)
+# proxmox_api_token_id: "root@pam!ansible-token"
+# proxmox_api_token_secret: "12345678-abcd-1234-abcd-1234567890ab"
+
+
+# --- Default Cloud-Init Indstillinger (For dine VM'er) ---
+cloudinit_user: "ubuntu"                 # Standardbrugeren der oprettes i dine VM'er
+cloudinit_password: "SikkerPassword123!"  # Password til denne bruger (hvis du skal logge på via Proxmox NoVNC konsol)
+
+# SSH Nøgle (DIN offentlige SSH-nøgle)
+# INDSÆT DIN EGEN OFFENTLIGE NØGLE HER (f.eks. indholdet af ~/.ssh/id_rsa.pub eller ~/.ssh/id_ed25519.pub)
+cloudinit_ssh_keys: |
+  ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI..................................... jsm@Macbook
+
+
+# ==============================================================================
+# LISTE OVER VIRTUELLE MASKINER DER SKAL DEPLOYEST
+# ==============================================================================
+vms_to_deploy:
+  - vmid: 101
+    name: "h5-webserver-01"
+    clone_template: 9000                 # ID på din Cloud-Init skabelon (oprettet med scriptet)
+    cores: 2                             # Antal CPU kerner
+    memory: 2048                         # RAM i MB
+    storage: "local-lvm"                 # Hvor disken skal gemmes i Proxmox
+    ipconfig0: "ip=dhcp"                 # Brug "ip=dhcp" for automatisk IP, eller statisk, f.eks: "ip=192.168.1.101/24,gw=192.168.1.1"
+
+  - vmid: 102
+    name: "h5-dbserver-01"
+    clone_template: 9000
+    cores: 2
+    memory: 4096
+    storage: "local-lvm"
+    # Statisk IP eksempel:
+    ipconfig0: "ip=192.168.1.102/24,gw=192.168.1.1"
+
+
+# ==============================================================================
+# LISTE OVER LXC CONTAINERE DER SKAL DEPLOYEST
+# ==============================================================================
+lxcs_to_deploy:
+  - vmid: 201
+    name: "h5-nginx-proxy"
+    # LXC skabelon (skal være downloadet på din Proxmox under f.eks. 'local:vztmpl')
+    ostemplate: "local:vztmpl/ubuntu-24.04-standard_24.04-1_amd64.tar.zst"
+    cores: 1
+    memory: 512
+    disk: "8"                            # Diskstørrelse i GB
+    storage: "local-lvm"
+    unprivileged: true                   # Sikkerhedsmæssigt bedst (uprivilegeret container)
+    netif0: "name=eth0,bridge=vmbr0,ip=dhcp"  # Netværksopsætning (kan også være statisk som i VM)
+
+  - vmid: 202
+    name: "h5-docker-host"
+    ostemplate: "local:vztmpl/ubuntu-24.04-standard_24.04-1_amd64.tar.zst"
+    cores: 2
+    memory: 2048
+    disk: "20"
+    storage: "local-lvm"
+    unprivileged: true
+    netif0: "name=eth0,bridge=vmbr0,ip=192.168.1.202/24,gw=192.168.1.1"

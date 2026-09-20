@@ -1,0 +1,60 @@
+---
+- name: Udrul Proxmox LXC Containere
+  hosts: localhost
+  gather_facts: false
+
+  vars_files:
+    - vars.yml
+
+  tasks:
+    - name: Bekræft at påkrævede moduler og biblioteker er klar
+      ansible.builtin.assert:
+        that:
+          - proxmox_api_host is defined
+          - lxcs_to_deploy is defined
+        fail_msg: "Konfigurationsfejl: Sørg for at vars.yml er udfyldt korrekt."
+
+    - name: Udrul LXC Containere
+      community.general.proxmox:
+        # API Forbindelsesdetaljer
+        api_host: "{{ proxmox_api_host }}"
+        api_user: "{{ proxmox_api_user }}"
+        api_password: "{{ proxmox_api_password | default(omit) }}"
+        api_token_id: "{{ proxmox_api_token_id | default(omit) }}"
+        api_token_secret: "{{ proxmox_api_token_secret | default(omit) }}"
+        validate_certs: "{{ proxmox_validate_certs | default(false) }}"
+        
+        # Mål-node og identitet
+        node: "{{ proxmox_node }}"
+        vmid: "{{ item.vmid }}"
+        hostname: "{{ item.name }}"
+        
+        # Skabelon og ressourcer
+        ostemplate: "{{ item.ostemplate }}"
+        storage: "{{ item.storage | default('local-lvm') }}"
+        disk: "{{ item.disk | default('8') }}"
+        cores: "{{ item.cores | default(1) }}"
+        memory: "{{ item.memory | default(512) }}"
+        swap: "{{ item.swap | default(512) }}"
+        
+        # Sikkerhed og adgang
+        unprivileged: "{{ item.unprivileged | default(true) }}"
+        password: "{{ cloudinit_password }}"
+        pubkey: "{{ cloudinit_ssh_keys }}"
+        
+        # Netværkskonfiguration
+        netif:
+          net0: "{{ item.netif0 | default('name=eth0,bridge=vmbr0,ip=dhcp') }}"
+        
+        # Start containeren automatisk efter oprettelse
+        state: started
+      loop: "{{ lxcs_to_deploy }}"
+      loop_control:
+        label: "{{ item.name }} (VMID: {{ item.vmid }})"
+
+    - name: Vis udrulningsstatus
+      ansible.builtin.debug:
+        msg: >
+          Udrulning færdig! LXC containerne er oprettet og startet.
+          Du kan tilgå dem via SSH med brugeren 'root' og din konfigurerede SSH-nøgle,
+          eller logge på med det konfigurerede password.

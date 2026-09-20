@@ -1,0 +1,60 @@
+---
+- name: Udrul Proxmox Virtuelle Maskiner (VM) med Cloud-Init
+  hosts: localhost
+  gather_facts: false
+
+  vars_files:
+    - vars.yml
+
+  tasks:
+    - name: Bekræft at påkrævede moduler og biblioteker er klar
+      ansible.builtin.assert:
+        that:
+          - proxmox_api_host is defined
+          - vms_to_deploy is defined
+        fail_msg: "Konfigurationsfejl: Sørg for at vars.yml er udfyldt korrekt."
+
+    - name: Udrul Virtuelle Maskiner fra Cloud-Init skabelon
+      community.general.proxmox_kvm:
+        # API Forbindelsesdetaljer
+        api_host: "{{ proxmox_api_host }}"
+        api_user: "{{ proxmox_api_user }}"
+        api_password: "{{ proxmox_api_password | default(omit) }}"
+        api_token_id: "{{ proxmox_api_token_id | default(omit) }}"
+        api_token_secret: "{{ proxmox_api_token_secret | default(omit) }}"
+        validate_certs: "{{ proxmox_validate_certs | default(false) }}"
+        
+        # Mål-node og identitet
+        node: "{{ proxmox_node }}"
+        vmid: "{{ item.vmid }}"
+        name: "{{ item.name }}"
+        
+        # Klonings-konfiguration
+        clone: "{{ item.clone_template | default(9000) }}"
+        format: qcow2
+        full: true
+        storage: "{{ item.storage | default('local-lvm') }}"
+        
+        # Hardware ressourcer
+        cores: "{{ item.cores | default(2) }}"
+        memory: "{{ item.memory | default(2048) }}"
+        
+        # Cloud-Init Konfiguration (Brugeroprettelse, SSH og Netværk)
+        ciuser: "{{ cloudinit_user }}"
+        cipassword: "{{ cloudinit_password }}"
+        sshkeys: "{{ cloudinit_ssh_keys }}"
+        ipconfig:
+          ipconfig0: "{{ item.ipconfig0 | default('ip=dhcp') }}"
+        
+        # Start maskinen automatisk efter oprettelse
+        state: started
+      loop: "{{ vms_to_deploy }}"
+      loop_control:
+        label: "{{ item.name }} (VMID: {{ item.vmid }})"
+
+    - name: Vis udrulningsstatus
+      ansible.builtin.debug:
+        msg: >
+          Udrulning færdig! De virtuelle maskiner er oprettet og startet.
+          Cloud-Init vil nu konfigurere dem ved første opstart.
+          Du kan logge ind med brugeren '{{ cloudinit_user }}' og din SSH-nøgle.

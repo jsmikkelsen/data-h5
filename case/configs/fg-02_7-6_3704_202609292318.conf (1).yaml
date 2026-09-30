@@ -1,0 +1,2047 @@
+#config-version=FGT60F-7.6.7-FW-build3704-260601:opmode=0:vdom=1:user=admin
+#conf_file_ver=327998062535169
+#buildno=3704
+#global_vdom=0:vd_name=alfa/alfa
+system_interface:
+    - "naf.alfa":
+        vdom: "alfa"
+        type: tunnel
+        src-check: disable
+        snmp-index: 20
+
+    - "l2t.alfa":
+        vdom: "alfa"
+        type: tunnel
+        snmp-index: 21
+
+    - "ssl.alfa":
+        vdom: "alfa"
+        type: tunnel
+        alias: "Agentless VPN interface"
+        snmp-index: 22
+
+    - "vl-alfa1":
+        vdom: "alfa"
+        ip: [172.16.10.1, 255.255.255.252]
+        allowaccess: ping
+        type: vdom-link
+        snmp-index: 38
+        macaddr: 76:bc:6e:76:00:2b
+
+    - "ds-01-link.910":
+        vdom: "alfa"
+        ip: [10.10.10.1, 255.255.255.248]
+        allowaccess: ping
+        device-identification: enable
+        role: lan
+        snmp-index: 47
+        interface: "ds-01-link"
+        vlanid: 910
+
+    - "ds-02-link.910":
+        vdom: "alfa"
+        ip: [10.9.10.1, 255.255.255.248]
+        allowaccess: ping
+        device-identification: enable
+        role: lan
+        snmp-index: 53
+        interface: "ds-02-link"
+        vlanid: 910
+
+
+system_admin:
+
+system_object-tagging:
+    - "default":
+
+
+switch-controller_traffic-policy:
+    - "quarantine":
+        description: "Rate control for quarantined traffic"
+        guaranteed-bandwidth: 163840
+        guaranteed-burst: 8192
+        maximum-burst: 163840
+        cos-queue: 0
+        id: 1
+
+    - "sniffer":
+        description: "Rate control for sniffer mirrored traffic"
+        guaranteed-bandwidth: 50000
+        guaranteed-burst: 8192
+        maximum-burst: 163840
+        cos-queue: 0
+        id: 2
+
+
+system_settings:
+
+system_replacemsg-group:
+    - "default":
+        comment: "Default replacement message group."
+
+
+firewall_address:
+    - "EMS_ALL_UNKNOWN_CLIENTS":
+        uuid: 6e10b60c-b5b6-51f1-5521-5ab0ab74e3d6
+        type: dynamic
+        sub-type: ems-tag
+        dirty: clean
+
+    - "EMS_ALL_UNMANAGEABLE_CLIENTS":
+        uuid: 6e10ef0a-b5b6-51f1-7e9c-c87cb8acf83e
+        type: dynamic
+        sub-type: ems-tag
+        dirty: clean
+
+    - "all":
+        uuid: 6ddd5654-b5b6-51f1-eb0b-91c9d210cb3d
+
+    - "FIREWALL_AUTH_PORTAL_ADDRESS":
+        uuid: 6ddd6310-b5b6-51f1-2bab-b9b314771211
+
+    - "FABRIC_DEVICE":
+        uuid: 6ddd6892-b5b6-51f1-fa6f-8ece2250c241
+        comment: "IPv4 addresses of Fabric Devices."
+
+    - "none":
+        uuid: 6dbfa14a-b5b6-51f1-dde2-685ac770fdba
+        subnet: [0.0.0.0, 255.255.255.255]
+
+    - "login.microsoftonline.com":
+        uuid: 6dbfdf34-b5b6-51f1-7abd-1ef23902b23d
+        type: fqdn
+        fqdn: "login.microsoftonline.com"
+
+    - "login.microsoft.com":
+        uuid: 6dc00694-b5b6-51f1-94b3-1b7d580e15e4
+        type: fqdn
+        fqdn: "login.microsoft.com"
+
+    - "login.windows.net":
+        uuid: 6dc02bec-b5b6-51f1-9fff-59bafcd8f29a
+        type: fqdn
+        fqdn: "login.windows.net"
+
+    - "gmail.com":
+        uuid: 6dc054c8-b5b6-51f1-8bd9-5de055ed39d8
+        type: fqdn
+        fqdn: "gmail.com"
+
+    - "wildcard.google.com":
+        uuid: 6dc079da-b5b6-51f1-869d-1dcd8d507f40
+        type: fqdn
+        fqdn: "*.google.com"
+
+    - "wildcard.dropbox.com":
+        uuid: 6dc09f5a-b5b6-51f1-9252-be0650434805
+        type: fqdn
+        fqdn: "*.dropbox.com"
+
+    - "ds-01-link.910 address":
+        uuid: b872be06-b5b7-51f1-8c25-9bb787c0f440
+        type: interface-subnet
+        subnet: [10.10.10.0, 255.255.255.248]
+        interface: "ds-01-link.910"
+
+    - "ds-02-link.910 address":
+        uuid: d3c41132-b5b7-51f1-5474-a36b88cfa92f
+        type: interface-subnet
+        subnet: [10.9.10.0, 255.255.255.248]
+        interface: "ds-02-link.910"
+
+    - "FCTEMS_ALL_FORTICLOUD_SERVERS":
+        uuid: e2bb1dd4-b5bc-51f1-b8e5-241d3e39a186
+        type: dynamic
+        sub-type: ems-tag
+        dirty: clean
+
+
+firewall_multicast-address:
+    - "all":
+        start-ip: 224.0.0.0
+        end-ip: 239.255.255.255
+
+    - "all_hosts":
+        start-ip: 224.0.0.1
+        end-ip: 224.0.0.1
+
+    - "all_routers":
+        start-ip: 224.0.0.2
+        end-ip: 224.0.0.2
+
+    - "Bonjour":
+        start-ip: 224.0.0.251
+        end-ip: 224.0.0.251
+
+    - "EIGRP":
+        start-ip: 224.0.0.10
+        end-ip: 224.0.0.10
+
+    - "OSPF":
+        start-ip: 224.0.0.5
+        end-ip: 224.0.0.6
+
+
+firewall_address6:
+    - "all":
+        uuid: 6dc207a0-b5b6-51f1-61da-4af1dc4ef052
+
+    - "none":
+        uuid: 6dc2346e-b5b6-51f1-9d68-54f7537f4911
+        ip6: ::/128
+
+
+firewall_multicast-address6:
+    - "all":
+        ip6: ff00::/8
+
+
+firewall_addrgrp:
+    - "G Suite":
+        member: ["gmail.com", "wildcard.google.com"]
+        uuid: 6dc0d3e4-b5b6-51f1-03dd-1e8ee5950953
+
+    - "Microsoft Office 365":
+        member: ["login.microsoftonline.com", "login.microsoft.com", "login.windows.net"]
+        uuid: 6dc15fc6-b5b6-51f1-79b5-8cd5449085c5
+
+
+firewall_service_category:
+    - "General":
+        uuid: 6dd628de-b5b6-51f1-b0fb-c2d9c5047279
+        comment: "General services."
+
+    - "Web Access":
+        uuid: 6dd63e78-b5b6-51f1-38bf-2df93c9e14dd
+        comment: "Web access."
+
+    - "File Access":
+        uuid: 6dd644d6-b5b6-51f1-faef-cf6447cb02f4
+        comment: "File access."
+
+    - "Email":
+        uuid: 6dd64b2a-b5b6-51f1-e641-1ce932d8b7f2
+        comment: "Email services."
+
+    - "Network Services":
+        uuid: 6dd65192-b5b6-51f1-5a79-9b50ab9677bc
+        comment: "Network services."
+
+    - "Authentication":
+        uuid: 6dd657e6-b5b6-51f1-0398-a9e7b4c3df08
+        comment: "Authentication service."
+
+    - "Remote Access":
+        uuid: 6dd65e3a-b5b6-51f1-b642-6ca4246a8389
+        comment: "Remote access."
+
+    - "Tunneling":
+        uuid: 6dd66498-b5b6-51f1-44f9-0597039c75ec
+        comment: "Tunneling service."
+
+    - "VoIP, Messaging & Other Applications":
+        uuid: 6dd66af6-b5b6-51f1-097c-668e4e223a72
+        comment: "VoIP, messaging, and other applications."
+
+
+firewall_service_custom:
+    - "ALL":
+        uuid: 6dd678c0-b5b6-51f1-517b-0d9d8fac138b
+        category: "General"
+        protocol: IP
+
+    - "ALL_TCP":
+        uuid: 6dd6947c-b5b6-51f1-4107-6171fc3214d7
+        category: "General"
+        tcp-portrange: 1-65535
+
+    - "ALL_UDP":
+        uuid: 6dd69b5c-b5b6-51f1-f915-e15a34bcd042
+        category: "General"
+        udp-portrange: 1-65535
+
+    - "ALL_ICMP":
+        uuid: 6dd6a232-b5b6-51f1-6173-5589db1448b0
+        category: "General"
+        protocol: ICMP
+        icmptype: ~
+
+    - "ALL_ICMP6":
+        uuid: 6dd6a962-b5b6-51f1-2033-6749237dc31f
+        category: "General"
+        protocol: ICMP6
+        icmptype: ~
+
+    - "GRE":
+        uuid: 6dd6b060-b5b6-51f1-b737-d9557dc35992
+        category: "Tunneling"
+        protocol: IP
+        protocol-number: 47
+
+    - "AH":
+        uuid: 6dd6b74a-b5b6-51f1-555c-6cfe706f8bac
+        category: "Tunneling"
+        protocol: IP
+        protocol-number: 51
+
+    - "ESP":
+        uuid: 6dd6be34-b5b6-51f1-46cf-206b12d98079
+        category: "Tunneling"
+        protocol: IP
+        protocol-number: 50
+
+    - "AOL":
+        uuid: 6dd6c532-b5b6-51f1-2844-7457c5174df3
+        tcp-portrange: 5190-5194
+
+    - "BGP":
+        uuid: 6dd6cb5e-b5b6-51f1-d28f-fb5a0b8e821f
+        category: "Network Services"
+        tcp-portrange: 179
+
+    - "DHCP":
+        uuid: 6dd6d248-b5b6-51f1-e56c-ab248b6d4d70
+        category: "Network Services"
+        udp-portrange: 67-68
+
+    - "DNS":
+        uuid: 6dd6d93c-b5b6-51f1-2baf-97aa21487948
+        category: "Network Services"
+        tcp-portrange: 53
+        udp-portrange: 53
+
+    - "FINGER":
+        uuid: 6dd6e026-b5b6-51f1-0040-2b9a5e0ab552
+        tcp-portrange: 79
+
+    - "FTP":
+        uuid: 6dd6e670-b5b6-51f1-bc51-ca7162989442
+        category: "File Access"
+        tcp-portrange: 21
+
+    - "FTP_GET":
+        uuid: 6dd6ed46-b5b6-51f1-805b-3b8989f93877
+        category: "File Access"
+        tcp-portrange: 21
+
+    - "FTP_PUT":
+        uuid: 6dd6f41c-b5b6-51f1-ec75-7a1041c70843
+        category: "File Access"
+        tcp-portrange: 21
+
+    - "GOPHER":
+        uuid: 6dd7006a-b5b6-51f1-3b45-8db7e168fe9f
+        tcp-portrange: 70
+
+    - "H323":
+        uuid: 6dd71af0-b5b6-51f1-bc07-9e26b5c96f6b
+        category: "VoIP, Messaging & Other Applications"
+        tcp-portrange: [1720, 1503]
+        udp-portrange: 1719
+
+    - "HTTP":
+        uuid: 6dd72284-b5b6-51f1-0b91-35292fbb31ad
+        category: "Web Access"
+        tcp-portrange: 80
+
+    - "HTTPS":
+        uuid: 6dd72996-b5b6-51f1-83f3-76c9b442903b
+        category: "Web Access"
+        tcp-portrange: 443
+
+    - "IKE":
+        uuid: 6dd730d0-b5b6-51f1-9c30-ed7b2c118f69
+        category: "Tunneling"
+        udp-portrange: [500, 4500]
+
+    - "IMAP":
+        uuid: 6dd737ce-b5b6-51f1-45d0-75161bb4b1fd
+        category: "Email"
+        tcp-portrange: 143
+
+    - "IMAPS":
+        uuid: 6dd73eb8-b5b6-51f1-07b7-d7d93c61b045
+        category: "Email"
+        tcp-portrange: 993
+
+    - "Internet-Locator-Service":
+        uuid: 6dd74598-b5b6-51f1-89cc-30452aed0588
+        tcp-portrange: 389
+
+    - "IRC":
+        uuid: 6dd74c00-b5b6-51f1-9d4b-d9dae755deed
+        category: "VoIP, Messaging & Other Applications"
+        tcp-portrange: 6660-6669
+
+    - "L2TP":
+        uuid: 6dd752fe-b5b6-51f1-ef64-2f21966d5c97
+        category: "Tunneling"
+        tcp-portrange: 1701
+        udp-portrange: 1701
+
+    - "LDAP":
+        uuid: 6dd759e8-b5b6-51f1-0526-2d2e779050a9
+        category: "Authentication"
+        tcp-portrange: 389
+
+    - "NetMeeting":
+        uuid: 6dd760be-b5b6-51f1-0382-ffe38248b6aa
+        tcp-portrange: 1720
+
+    - "NFS":
+        uuid: 6dd7674e-b5b6-51f1-e9ea-0c8f98075552
+        category: "File Access"
+        tcp-portrange: [111, 2049]
+        udp-portrange: [111, 2049]
+
+    - "NNTP":
+        uuid: 6dd76e42-b5b6-51f1-0ee3-285970c0ae1b
+        tcp-portrange: 119
+
+    - "NTP":
+        uuid: 6dd77478-b5b6-51f1-76ac-8990b9057a02
+        category: "Network Services"
+        tcp-portrange: 123
+        udp-portrange: 123
+
+    - "OSPF":
+        uuid: 6dd77bb2-b5b6-51f1-0a90-444fbb0f2145
+        category: "Network Services"
+        protocol: IP
+        protocol-number: 89
+
+    - "PC-Anywhere":
+        uuid: 6dd787ec-b5b6-51f1-36cf-f5429fb1d059
+        category: "Remote Access"
+        tcp-portrange: 5631
+        udp-portrange: 5632
+
+    - "PING":
+        uuid: 6dd78fbc-b5b6-51f1-3912-a8e58b76ac55
+        category: "Network Services"
+        protocol: ICMP
+        icmptype: 8
+        icmpcode: ~
+
+    - "TIMESTAMP":
+        uuid: 6dd796b0-b5b6-51f1-f671-f566057e6047
+        protocol: ICMP
+        icmptype: 13
+        icmpcode: ~
+
+    - "INFO_REQUEST":
+        uuid: 6dd79d18-b5b6-51f1-983c-90e7c620ef90
+        protocol: ICMP
+        icmptype: 15
+        icmpcode: ~
+
+    - "INFO_ADDRESS":
+        uuid: 6dd7a344-b5b6-51f1-cc2e-7d0dbc6585b1
+        protocol: ICMP
+        icmptype: 17
+        icmpcode: ~
+
+    - "ONC-RPC":
+        uuid: 6dd7ad6c-b5b6-51f1-3376-a865b90e47df
+        category: "Remote Access"
+        tcp-portrange: 111
+        udp-portrange: 111
+
+    - "DCE-RPC":
+        uuid: 6dd7b47e-b5b6-51f1-35b0-1247ac02f7d7
+        category: "Remote Access"
+        tcp-portrange: 135
+        udp-portrange: 135
+
+    - "POP3":
+        uuid: 6dd7bb90-b5b6-51f1-10ae-f6035cf0cf32
+        category: "Email"
+        tcp-portrange: 110
+
+    - "POP3S":
+        uuid: 6dd7c266-b5b6-51f1-86fb-89fcf311f3e6
+        category: "Email"
+        tcp-portrange: 995
+
+    - "PPTP":
+        uuid: 6dd7c964-b5b6-51f1-c355-62bd3237bbc0
+        category: "Tunneling"
+        tcp-portrange: 1723
+
+    - "QUAKE":
+        uuid: 6dd7d062-b5b6-51f1-abe5-436513764ae0
+        udp-portrange: [26000, 27000, 27910, 27960]
+
+    - "RAUDIO":
+        uuid: 6dd7d6c0-b5b6-51f1-831d-b7c68250fa48
+        udp-portrange: 7070
+
+    - "REXEC":
+        uuid: 6dd7dcec-b5b6-51f1-c31c-b7f7f189fdc6
+        tcp-portrange: 512
+
+    - "RIP":
+        uuid: 6dd7e322-b5b6-51f1-beb1-e17e1457615c
+        category: "Network Services"
+        udp-portrange: 520
+
+    - "RLOGIN":
+        uuid: 6dd7ea0c-b5b6-51f1-871e-f5f2edd2d6c8
+        tcp-portrange: 513:512-1023
+
+    - "RSH":
+        uuid: 6dd7f07e-b5b6-51f1-cd55-60207e37f8b1
+        tcp-portrange: 514:512-1023
+
+    - "SCCP":
+        uuid: 6dd7fcd6-b5b6-51f1-fc99-5c95fd5fb95e
+        category: "VoIP, Messaging & Other Applications"
+        tcp-portrange: 2000
+
+    - "SIP":
+        uuid: 6dd80fd2-b5b6-51f1-fa61-dd710e0129e6
+        category: "VoIP, Messaging & Other Applications"
+        tcp-portrange: 5060
+        udp-portrange: 5060
+
+    - "SIP-MSNmessenger":
+        uuid: 6dd816e4-b5b6-51f1-0b89-d4a21fbf84af
+        category: "VoIP, Messaging & Other Applications"
+        tcp-portrange: 1863
+
+    - "SAMBA":
+        uuid: 6dd81df6-b5b6-51f1-05ae-363af669997f
+        category: "File Access"
+        tcp-portrange: 139
+
+    - "SMTP":
+        uuid: 6dd824e0-b5b6-51f1-5be1-dabaa2728a95
+        category: "Email"
+        tcp-portrange: 25
+
+    - "SMTPS":
+        uuid: 6dd82bf2-b5b6-51f1-4932-8c5062b2dde0
+        category: "Email"
+        tcp-portrange: 465
+
+    - "SNMP":
+        uuid: 6dd83318-b5b6-51f1-14f2-f9b44a7dd73b
+        category: "Network Services"
+        tcp-portrange: 161-162
+        udp-portrange: 161-162
+
+    - "SSH":
+        uuid: 6dd83a2a-b5b6-51f1-74cb-6c860036fe75
+        category: "Remote Access"
+        tcp-portrange: 22
+
+    - "SYSLOG":
+        uuid: 6dd84114-b5b6-51f1-0015-62a3512816a9
+        category: "Network Services"
+        udp-portrange: 514
+
+    - "TALK":
+        uuid: 6dd847fe-b5b6-51f1-f12a-61e9884d7e28
+        udp-portrange: 517-518
+
+    - "TELNET":
+        uuid: 6dd84e48-b5b6-51f1-4886-6eef3c6a902c
+        category: "Remote Access"
+        tcp-portrange: 23
+
+    - "TFTP":
+        uuid: 6dd85578-b5b6-51f1-2cf1-17e105365ae4
+        category: "File Access"
+        udp-portrange: 69
+
+    - "MGCP":
+        uuid: 6dd85c9e-b5b6-51f1-bac2-d48a97cb56f7
+        category: "VoIP, Messaging & Other Applications"
+        tcp-portrange: 2428
+        udp-portrange: [2427, 2727]
+
+    - "UUCP":
+        uuid: 6dd86388-b5b6-51f1-217a-7732c1ccf428
+        tcp-portrange: 540
+
+    - "VDOLIVE":
+        uuid: 6dd869c8-b5b6-51f1-9ddd-b010136987b5
+        tcp-portrange: 7000-7010
+
+    - "WAIS":
+        uuid: 6dd87044-b5b6-51f1-1aca-51b0fe98a0d7
+        tcp-portrange: 210
+
+    - "WINFRAME":
+        uuid: 6dd87b7a-b5b6-51f1-6b46-f66356b22cf5
+        tcp-portrange: [1494, 2598]
+
+    - "X-WINDOWS":
+        uuid: 6dd882a0-b5b6-51f1-f846-eea131c39d2b
+        category: "Remote Access"
+        tcp-portrange: 6000-6063
+
+    - "PING6":
+        uuid: 6dd889bc-b5b6-51f1-2b3c-14baef56649c
+        protocol: ICMP6
+        icmptype: 128
+        icmpcode: ~
+
+    - "MS-SQL":
+        uuid: 6dd8906a-b5b6-51f1-7793-6d6059d33f1c
+        category: "VoIP, Messaging & Other Applications"
+        tcp-portrange: [1433, 1434]
+
+    - "MYSQL":
+        uuid: 6dd8975e-b5b6-51f1-362f-6194e453a9c2
+        category: "VoIP, Messaging & Other Applications"
+        tcp-portrange: 3306
+
+    - "RDP":
+        uuid: 6dd89e70-b5b6-51f1-5576-cb19ad50dbb7
+        category: "Remote Access"
+        tcp-portrange: 3389
+
+    - "VNC":
+        uuid: 6dd8a672-b5b6-51f1-cac8-55fbb54a54d4
+        category: "Remote Access"
+        tcp-portrange: 5900
+
+    - "DHCP6":
+        uuid: 6dd8ada2-b5b6-51f1-1c91-62cd65b10f96
+        category: "Network Services"
+        udp-portrange: [546, 547]
+
+    - "SQUID":
+        uuid: 6dd8b48c-b5b6-51f1-0f24-1290a7293ea7
+        category: "Tunneling"
+        tcp-portrange: 3128
+
+    - "SOCKS":
+        uuid: 6dd8bb94-b5b6-51f1-c762-670e2fc412ca
+        category: "Tunneling"
+        tcp-portrange: 1080
+        udp-portrange: 1080
+
+    - "WINS":
+        uuid: 6dd8c2c4-b5b6-51f1-73f7-72092a555aea
+        category: "Remote Access"
+        tcp-portrange: 1512
+        udp-portrange: 1512
+
+    - "RADIUS":
+        uuid: 6dd8c9c2-b5b6-51f1-8449-9fca826332a6
+        category: "Authentication"
+        udp-portrange: [1812, 1813]
+
+    - "RADIUS-OLD":
+        uuid: 6dd8d0b6-b5b6-51f1-716d-471b0fa0dafc
+        udp-portrange: [1645, 1646]
+
+    - "CVSPSERVER":
+        uuid: 6dd8d70a-b5b6-51f1-655b-81c7832369f7
+        tcp-portrange: 2401
+        udp-portrange: 2401
+
+    - "AFS3":
+        uuid: 6dd8dd90-b5b6-51f1-9a6e-13c890d6c2cf
+        category: "File Access"
+        tcp-portrange: 7000-7009
+        udp-portrange: 7000-7009
+
+    - "TRACEROUTE":
+        uuid: 6dd8e484-b5b6-51f1-7b05-9221f22190c2
+        category: "Network Services"
+        udp-portrange: 33434-33535
+
+    - "RTSP":
+        uuid: 6dd8fd66-b5b6-51f1-f492-a99e1a8af937
+        category: "VoIP, Messaging & Other Applications"
+        tcp-portrange: [554, 7070, 8554]
+        udp-portrange: 554
+
+    - "MMS":
+        uuid: 6dd90522-b5b6-51f1-66a1-00f3769eff1b
+        tcp-portrange: 1755
+        udp-portrange: 1024-5000
+
+    - "KERBEROS":
+        uuid: 6dd90ba8-b5b6-51f1-281d-11e14f42a09a
+        category: "Authentication"
+        tcp-portrange: [88, 464]
+        udp-portrange: [88, 464]
+
+    - "LDAP_UDP":
+        uuid: 6dd912a6-b5b6-51f1-5564-d5aed35a0cf0
+        category: "Authentication"
+        udp-portrange: 389
+
+    - "SMB":
+        uuid: 6dd919a4-b5b6-51f1-4d34-435d57b40e93
+        category: "File Access"
+        tcp-portrange: 445
+
+    - "NONE":
+        uuid: 6dd920b6-b5b6-51f1-aeee-58770a8754e0
+        tcp-portrange: 0
+
+
+firewall_service_group:
+    - "Email Access":
+        uuid: 6ddc8b34-b5b6-51f1-5a29-906b8fcbb54f
+        member: ["DNS", "IMAP", "IMAPS", "POP3", "POP3S", "SMTP", "SMTPS"]
+
+    - "Web Access":
+        uuid: 6ddcd346-b5b6-51f1-0c6e-62560effc1fe
+        member: ["DNS", "HTTP", "HTTPS"]
+
+    - "Windows AD":
+        uuid: 6ddcf952-b5b6-51f1-5dce-b626f7e5a51f
+        member: ["DCE-RPC", "DNS", "KERBEROS", "LDAP", "LDAP_UDP", "SAMBA", "SMB"]
+
+    - "Exchange Server":
+        uuid: 6ddd2ed6-b5b6-51f1-a33e-bf62000f225a
+        member: ["DCE-RPC", "DNS", "HTTPS"]
+
+
+vpn_certificate_ca:
+
+vpn_certificate_local:
+    - "Fortinet_CA_SSL":
+        comments: "This is the default CA certificate the SSL Inspection will use when generating new server certificates."
+        range: global
+        source: factory
+        last-updated: 1789993055
+
+    - "Fortinet_CA_Untrusted":
+        comments: "This is the default CA certificate the SSL Inspection will use when generating new server certificates."
+        range: global
+        source: factory
+        last-updated: 1789993055
+
+    - "Fortinet_SSL":
+        comments: "This certificate is embedded in the hardware at the factory and is unique to this unit. "
+        range: global
+        source: factory
+        last-updated: 1789993055
+
+    - "Fortinet_GUI_Server":
+        comments: "This is the default CA certificate the SSL Inspection will use when generating new server certificates."
+        range: global
+        source: factory
+        last-updated: 1789995979
+
+    - "Fortinet_SSL_RSA1024":
+        comments: "This certificate is embedded in the hardware at the factory and is unique to this unit. "
+        range: global
+        source: factory
+        last-updated: 1789993055
+
+    - "Fortinet_SSL_RSA2048":
+        comments: "This certificate is embedded in the hardware at the factory and is unique to this unit. "
+        range: global
+        source: factory
+        last-updated: 1789993055
+
+    - "Fortinet_SSL_RSA4096":
+        comments: "This certificate is embedded in the hardware at the factory and is unique to this unit. "
+        range: global
+        source: factory
+        last-updated: 1789993055
+
+    - "Fortinet_SSL_DSA1024":
+        comments: "This certificate is embedded in the hardware at the factory and is unique to this unit. "
+        range: global
+        source: factory
+        last-updated: 1789993055
+
+    - "Fortinet_SSL_DSA2048":
+        comments: "This certificate is embedded in the hardware at the factory and is unique to this unit. "
+        range: global
+        source: factory
+        last-updated: 1789993055
+
+    - "Fortinet_SSL_ECDSA256":
+        comments: "This certificate is embedded in the hardware at the factory and is unique to this unit. "
+        range: global
+        source: factory
+        last-updated: 1789993055
+
+    - "Fortinet_SSL_ECDSA384":
+        comments: "This certificate is embedded in the hardware at the factory and is unique to this unit. "
+        range: global
+        source: factory
+        last-updated: 1789993055
+
+    - "Fortinet_SSL_ECDSA521":
+        comments: "This certificate is embedded in the hardware at the factory and is unique to this unit. "
+        range: global
+        source: factory
+        last-updated: 1789993055
+
+    - "Fortinet_SSL_ED25519":
+        comments: "This certificate is embedded in the hardware at the factory and is unique to this unit. "
+        range: global
+        source: factory
+        last-updated: 1789993055
+
+    - "Fortinet_SSL_ED448":
+        comments: "This certificate is embedded in the hardware at the factory and is unique to this unit. "
+        range: global
+        source: factory
+        last-updated: 1789993055
+
+
+webfilter_ftgd-local-cat:
+    - "custom1":
+        id: 140
+
+    - "custom2":
+        id: 141
+
+
+firewall_shaper_traffic-shaper:
+    - "high-priority":
+        maximum-bandwidth: 1048576
+        per-policy: enable
+
+    - "medium-priority":
+        maximum-bandwidth: 1048576
+        priority: medium
+        per-policy: enable
+
+    - "low-priority":
+        maximum-bandwidth: 1048576
+        priority: low
+        per-policy: enable
+
+    - "guarantee-100kbps":
+        guaranteed-bandwidth: 100
+        maximum-bandwidth: 1048576
+        per-policy: enable
+
+    - "shared-1M-pipe":
+        maximum-bandwidth: 1024
+
+
+dlp_filepattern:
+    - "1":
+        name: "builtin-patterns"
+        entries:
+            - "*.bat":
+
+            - "*.com":
+
+            - "*.dll":
+
+            - "*.doc":
+
+            - "*.exe":
+
+            - "*.gz":
+
+            - "*.hta":
+
+            - "*.ppt":
+
+            - "*.rar":
+
+            - "*.scr":
+
+            - "*.tar":
+
+            - "*.tgz":
+
+            - "*.vb?":
+
+            - "*.wps":
+
+            - "*.xl?":
+
+            - "*.zip":
+
+            - "*.pif":
+
+            - "*.cpl":
+
+
+
+    - "2":
+        name: "all_executables"
+        entries:
+            - "bat":
+                filter-type: type
+                file-type: bat
+
+            - "exe":
+                filter-type: type
+                file-type: exe
+
+            - "elf":
+                filter-type: type
+                file-type: elf
+
+            - "hta":
+                filter-type: type
+                file-type: hta
+
+
+
+
+webfilter_ips-urlfilter-setting:
+
+webfilter_ips-urlfilter-setting6:
+
+log_threat-weight:
+    web:
+        - "1":
+            category: 26
+            level: high
+
+        - "2":
+            category: 61
+            level: high
+
+        - "3":
+            category: 86
+            level: high
+
+        - "4":
+            category: 1
+            level: medium
+
+        - "5":
+            category: 3
+            level: medium
+
+        - "6":
+            category: 4
+            level: medium
+
+        - "7":
+            category: 5
+            level: medium
+
+        - "8":
+            category: 6
+            level: medium
+
+        - "9":
+            category: 12
+            level: medium
+
+        - "10":
+            category: 59
+            level: medium
+
+        - "11":
+            category: 62
+            level: medium
+
+        - "12":
+            category: 83
+            level: medium
+
+        - "13":
+            category: 72
+
+        - "14":
+            category: 14
+
+        - "15":
+            category: 96
+            level: medium
+
+
+    application:
+        - "1":
+            category: 2
+
+        - "2":
+            category: 6
+            level: medium
+
+
+
+user_setting:
+    auth-cert: "Fortinet_Factory"
+
+user_group:
+    - "SSO_Guest_Users":
+
+
+voip_profile:
+    - "default":
+        comment: "Default VoIP profile."
+        sip:
+
+
+    - "strict":
+        sip:
+            malformed-request-line: discard
+            malformed-header-via: discard
+            malformed-header-from: discard
+            malformed-header-to: discard
+            malformed-header-call-id: discard
+            malformed-header-cseq: discard
+            malformed-header-rack: discard
+            malformed-header-rseq: discard
+            malformed-header-contact: discard
+            malformed-header-record-route: discard
+            malformed-header-route: discard
+            malformed-header-expires: discard
+            malformed-header-content-type: discard
+            malformed-header-content-length: discard
+            malformed-header-max-forwards: discard
+            malformed-header-allow: discard
+            malformed-header-p-asserted-identity: discard
+            malformed-header-sdp-v: discard
+            malformed-header-sdp-o: discard
+            malformed-header-sdp-s: discard
+            malformed-header-sdp-i: discard
+            malformed-header-sdp-c: discard
+            malformed-header-sdp-b: discard
+            malformed-header-sdp-z: discard
+            malformed-header-sdp-k: discard
+            malformed-header-sdp-a: discard
+            malformed-header-sdp-t: discard
+            malformed-header-sdp-r: discard
+            malformed-header-sdp-m: discard
+
+
+
+system_sdwan:
+    zone:
+        - "virtual-wan-link":
+
+
+    health-check:
+        - "Default_DNS":
+            system-dns: enable
+            interval: 1000
+            probe-timeout: 1000
+            recoverytime: 10
+            sla:
+                - "1":
+                    link-cost-factor: [latency, jitter, packet-loss]
+                    latency-threshold: 250
+                    jitter-threshold: 50
+                    packetloss-threshold: 5
+
+
+
+        - "Default_Office_365":
+            server: "www.office.com"
+            protocol: https
+            interval: 120000
+            probe-timeout: 120000
+            recoverytime: 10
+            sla:
+                - "1":
+                    link-cost-factor: [latency, jitter, packet-loss]
+                    latency-threshold: 250
+                    jitter-threshold: 50
+                    packetloss-threshold: 5
+
+
+
+        - "Default_Gmail":
+            server: "gmail.com"
+            interval: 1000
+            probe-timeout: 1000
+            recoverytime: 10
+            sla:
+                - "1":
+                    link-cost-factor: [latency, jitter, packet-loss]
+                    latency-threshold: 250
+                    jitter-threshold: 50
+                    packetloss-threshold: 2
+
+
+
+        - "Default_Google Search":
+            server: "www.google.com"
+            protocol: https
+            interval: 120000
+            probe-timeout: 120000
+            recoverytime: 10
+            sla:
+                - "1":
+                    link-cost-factor: [latency, jitter, packet-loss]
+                    latency-threshold: 250
+                    jitter-threshold: 50
+                    packetloss-threshold: 5
+
+
+
+        - "Default_FortiGuard":
+            server: "fortiguard.com"
+            protocol: https
+            interval: 120000
+            probe-timeout: 120000
+            recoverytime: 10
+            sla:
+                - "1":
+                    link-cost-factor: [latency, jitter, packet-loss]
+                    latency-threshold: 250
+                    jitter-threshold: 50
+                    packetloss-threshold: 5
+
+
+
+
+
+dnsfilter_profile:
+    - "default":
+        comment: "Default dns filtering."
+        ftgd-dns:
+            filters:
+                - "1":
+                    category: 2
+
+                - "2":
+                    category: 7
+
+                - "3":
+                    category: 8
+
+                - "4":
+                    category: 9
+
+                - "5":
+                    category: 11
+
+                - "6":
+                    category: 12
+
+                - "7":
+                    category: 13
+
+                - "8":
+                    category: 14
+
+                - "9":
+                    category: 15
+
+                - "10":
+                    category: 16
+
+                - "11":
+
+                - "12":
+                    category: 57
+
+                - "13":
+                    category: 63
+
+                - "14":
+                    category: 64
+
+                - "15":
+                    category: 65
+
+                - "16":
+                    category: 66
+
+                - "17":
+                    category: 67
+
+                - "18":
+                    category: 26
+                    action: block
+
+                - "19":
+                    category: 61
+                    action: block
+
+                - "20":
+                    category: 86
+                    action: block
+
+                - "21":
+                    category: 88
+                    action: block
+
+                - "22":
+                    category: 90
+                    action: block
+
+                - "23":
+                    category: 91
+                    action: block
+
+                - "24":
+                    category: 96
+                    action: block
+
+                - "25":
+                    category: 98
+                    action: block
+
+                - "26":
+                    category: 99
+                    action: block
+
+
+
+        block-botnet: enable
+
+
+antivirus_settings:
+    machine-learning-detection: enable
+    grayware: enable
+
+webfilter_ftgd-risk-level:
+    - "high":
+        high: 100
+        low: 91
+
+    - "suspicious":
+        high: 90
+        low: 71
+
+    - "moderate":
+        high: 70
+        low: 51
+
+    - "low":
+        high: 50
+        low: 21
+
+    - "trustworthy":
+        high: 20
+        low: 1
+
+    - "unrated":
+
+
+emailfilter_profile:
+    - "default":
+        comment: "Malware and phishing URL filtering."
+        imap:
+
+        pop3:
+
+        smtp:
+
+
+    - "sniffer-profile":
+        comment: "Malware and phishing URL monitoring."
+        imap:
+
+        pop3:
+
+        smtp:
+
+
+
+log_memory_setting:
+    status: enable
+
+log_null-device_setting:
+    status: disable
+
+firewall_schedule_recurring:
+    - "always":
+        uuid: 6dc2ed64-b5b6-51f1-9f5a-0fedef48cabe
+        day: [sunday, monday, tuesday, wednesday, thursday, friday, saturday]
+
+    - "none":
+        uuid: 6dc31ffa-b5b6-51f1-3204-234f5e2b7a90
+
+    - "default-darrp-optimize":
+        uuid: 6dc339b8-b5b6-51f1-9bde-a2bdd56a8408
+        start: 01:00
+        end: 01:30
+        day: [sunday, monday, tuesday, wednesday, thursday, friday, saturday]
+
+
+firewall_ssh_setting:
+    caname: "g-Fortinet_SSH_CA"
+    untrusted-caname: "g-Fortinet_SSH_CA_Untrusted"
+    hostkey-rsa2048: "g-Fortinet_SSH_RSA2048"
+    hostkey-dsa1024: "g-Fortinet_SSH_DSA1024"
+    hostkey-ecdsa256: "g-Fortinet_SSH_ECDSA256"
+    hostkey-ecdsa384: "g-Fortinet_SSH_ECDSA384"
+    hostkey-ecdsa521: "g-Fortinet_SSH_ECDSA521"
+    hostkey-ed25519: "g-Fortinet_SSH_ED25519"
+
+firewall_profile-protocol-options:
+    - "default":
+        comment: "All default services."
+        http:
+            ports: 80
+            options: ~
+            post-lang: ~
+            streaming-content-scan-type: octet
+
+        ftp:
+            ports: 21
+            options: splice
+
+        imap:
+            ports: 143
+            options: fragmail
+
+        pop3:
+            ports: 110
+            options: fragmail
+
+        smtp:
+            ports: 25
+            options: [fragmail, splice]
+
+        nntp:
+            ports: 119
+            options: splice
+
+        dns:
+            ports: 53
+
+        cifs:
+            ports: 445
+            options: ~
+
+
+
+firewall_ssl-ssh-profile:
+    - "deep-inspection":
+        comment: "Read-only deep inspection profile."
+        https:
+            ports: 443
+            status: deep-inspection
+
+        ftps:
+            ports: 990
+            status: deep-inspection
+
+        imaps:
+            ports: 993
+            status: deep-inspection
+
+        pop3s:
+            ports: 995
+            status: deep-inspection
+
+        smtps:
+            ports: 465
+            status: deep-inspection
+
+        dot:
+            status: disable
+
+        ssl-exempt:
+            - "1":
+                fortiguard-category: 31
+
+            - "2":
+                fortiguard-category: 33
+
+            - "3":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-adobe"
+
+            - "4":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-Adobe Login"
+
+            - "5":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-android"
+
+            - "6":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-apple"
+
+            - "7":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-appstore"
+
+            - "8":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-auth.gfx.ms"
+
+            - "9":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-citrix"
+
+            - "10":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-dropbox.com"
+
+            - "11":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-eease"
+
+            - "12":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-firefox update server"
+
+            - "13":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-fortinet"
+
+            - "14":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-googleapis.com"
+
+            - "15":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-google-drive"
+
+            - "16":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-google-play2"
+
+            - "17":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-google-play3"
+
+            - "18":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-Gotomeeting"
+
+            - "19":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-icloud"
+
+            - "20":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-itunes"
+
+            - "21":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-microsoft"
+
+            - "22":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-skype"
+
+            - "23":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-softwareupdate.vmware.com"
+
+            - "24":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-verisign"
+
+            - "25":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-Windows update 2"
+
+            - "26":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-live.com"
+
+            - "27":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-google-play"
+
+            - "28":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-update.microsoft.com"
+
+            - "29":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-swscan.apple.com"
+
+            - "30":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-autoupdate.opera.com"
+
+            - "31":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-cdn-apple"
+
+            - "32":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-mzstatic-apple"
+
+
+
+    - "custom-deep-inspection":
+        comment: "Customizable deep inspection profile."
+        https:
+            ports: 443
+            status: deep-inspection
+
+        ftps:
+            ports: 990
+            status: deep-inspection
+
+        imaps:
+            ports: 993
+            status: deep-inspection
+
+        pop3s:
+            ports: 995
+            status: deep-inspection
+
+        smtps:
+            ports: 465
+            status: deep-inspection
+
+        dot:
+            status: disable
+
+        ssl-exempt:
+            - "1":
+                fortiguard-category: 31
+
+            - "2":
+                fortiguard-category: 33
+
+            - "3":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-adobe"
+
+            - "4":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-Adobe Login"
+
+            - "5":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-android"
+
+            - "6":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-apple"
+
+            - "7":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-appstore"
+
+            - "8":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-auth.gfx.ms"
+
+            - "9":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-citrix"
+
+            - "10":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-dropbox.com"
+
+            - "11":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-eease"
+
+            - "12":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-firefox update server"
+
+            - "13":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-fortinet"
+
+            - "14":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-googleapis.com"
+
+            - "15":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-google-drive"
+
+            - "16":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-google-play2"
+
+            - "17":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-google-play3"
+
+            - "18":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-Gotomeeting"
+
+            - "19":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-icloud"
+
+            - "20":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-itunes"
+
+            - "21":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-microsoft"
+
+            - "22":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-skype"
+
+            - "23":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-softwareupdate.vmware.com"
+
+            - "24":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-verisign"
+
+            - "25":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-Windows update 2"
+
+            - "26":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-live.com"
+
+            - "27":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-google-play"
+
+            - "28":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-update.microsoft.com"
+
+            - "29":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-swscan.apple.com"
+
+            - "30":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-autoupdate.opera.com"
+
+            - "31":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-cdn-apple"
+
+            - "32":
+                type: wildcard-fqdn
+                wildcard-fqdn: "g-mzstatic-apple"
+
+
+
+    - "certificate-inspection":
+        comment: "Read-only SSL handshake inspection profile."
+        https:
+            ports: 443
+            status: certificate-inspection
+
+        ftps:
+            status: disable
+
+        imaps:
+            status: disable
+
+        pop3s:
+            status: disable
+
+        smtps:
+            status: disable
+
+        dot:
+            status: disable
+
+
+    - "no-inspection":
+        comment: "Read-only profile that does no inspection."
+        https:
+            status: disable
+
+        ftps:
+            status: disable
+
+        imaps:
+            status: disable
+
+        pop3s:
+            status: disable
+
+        smtps:
+            status: disable
+
+        dot:
+            status: disable
+
+
+
+firewall_policy:
+    - "1":
+        name: "Outbound-Internet"
+        uuid: b6a561f4-b5b8-51f1-f4ba-70a551daf387
+        srcintf: ["ds-01-link.910", "ds-02-link.910"]
+        dstintf: "vl-alfa1"
+        action: accept
+        srcaddr: "all"
+        dstaddr: "all"
+        schedule: "always"
+        service: "ALL"
+        nat: enable
+
+
+firewall_local-in-policy:
+    - "1":
+        uuid: 6df93a22-b5b6-51f1-7b00-32360fa9a4eb
+        intf: "any"
+        dstaddr: "all"
+        internet-service-src: enable
+        internet-service-src-name: ["Malicious-Malicious.Server", "Tor-Exit.Node", "Tor-Relay.Node"]
+        service: "ALL"
+        schedule: "always"
+
+
+switch-controller_security-policy_802-1X:
+    - "802-1X-policy-default":
+        user-group: "SSO_Guest_Users"
+
+
+switch-controller_security-policy_local-access:
+    - "default":
+        mgmt-allowaccess: [https, ping, ssh]
+        internal-allowaccess: [https, ping, ssh]
+
+
+switch-controller_lldp-profile:
+    - "default":
+        med-tlvs: [inventory-management, network-policy, location-identification]
+        auto-isl: disable
+        med-network-policy:
+            - "voice":
+
+            - "voice-signaling":
+
+            - "guest-voice":
+
+            - "guest-voice-signaling":
+
+            - "softphone-voice":
+
+            - "video-conferencing":
+
+            - "streaming-video":
+
+            - "video-signaling":
+
+
+        med-location-service:
+            - "coordinates":
+
+            - "address-civic":
+
+            - "elin-number":
+
+
+
+    - "default-auto-isl":
+
+    - "default-auto-mclag-icl":
+        auto-mclag-icl: enable
+
+
+switch-controller_qos_dot1p-map:
+    - "voice-dot1p":
+        priority-0: queue-4
+        priority-1: queue-4
+        priority-2: queue-3
+        priority-3: queue-2
+        priority-4: queue-3
+        priority-5: queue-1
+        priority-6: queue-2
+        priority-7: queue-2
+
+
+switch-controller_qos_ip-dscp-map:
+    - "voice-dscp":
+        map:
+            - "1":
+                cos-queue: 1
+                value: 46
+
+            - "2":
+                cos-queue: 2
+                value: 24,26,48,56
+
+            - "5":
+                cos-queue: 3
+                value: 34
+
+
+
+
+switch-controller_qos_queue-policy:
+    - "default":
+        schedule: round-robin
+        rate-by: kbps
+        cos-queue:
+            - "queue-0":
+
+            - "queue-1":
+
+            - "queue-2":
+
+            - "queue-3":
+
+            - "queue-4":
+
+            - "queue-5":
+
+            - "queue-6":
+
+            - "queue-7":
+
+
+
+    - "voice-egress":
+        schedule: weighted
+        rate-by: kbps
+        cos-queue:
+            - "queue-0":
+
+            - "queue-1":
+                weight: 0
+
+            - "queue-2":
+                weight: 6
+
+            - "queue-3":
+                weight: 37
+
+            - "queue-4":
+                weight: 12
+
+            - "queue-5":
+
+            - "queue-6":
+
+            - "queue-7":
+
+
+
+
+switch-controller_qos_qos-policy:
+    - "default":
+
+    - "voice-qos":
+        trust-dot1p-map: "voice-dot1p"
+        trust-ip-dscp-map: "voice-dscp"
+        queue-policy: "voice-egress"
+
+
+switch-controller_storm-control-policy:
+    - "default":
+        description: "default storm control on all port"
+
+    - "auto-config":
+        description: "storm control policy for fortilink-isl-icl port"
+        storm-control-mode: disabled
+
+
+switch-controller_auto-config_policy:
+    - "pse":
+
+    - "default":
+
+    - "default-icl":
+        poe-status: disable
+        igmp-flood-report: enable
+        igmp-flood-traffic: enable
+
+
+switch-controller_initial-config_template:
+    - "_default":
+        vlanid: 1
+
+    - "quarantine":
+        vlanid: 4093
+        dhcp-server: enable
+
+    - "rspan":
+        vlanid: 4092
+        dhcp-server: enable
+
+    - "voice":
+        vlanid: 4091
+
+    - "video":
+        vlanid: 4090
+
+    - "onboarding":
+        vlanid: 4089
+
+    - "nac_segment":
+        vlanid: 4088
+        dhcp-server: enable
+
+
+switch-controller_switch-profile:
+    - "default":
+
+
+switch-controller_ptp_profile:
+    - "default":
+
+
+switch-controller_ptp_interface-policy:
+    - "default":
+
+
+switch-controller_dsl_policy:
+    - "default":
+        type: Proscend
+        us-bitswap: enable
+        ds-bitswap: enable
+        profile: auto-30a
+        cs: [A43, B43, A43C]
+        pause-frame: enable
+        cpe-aele: enable
+        cpe-aele-mode: ELE_MIN
+        append_padding: enable
+
+
+switch-controller_remote-log:
+    - "syslogd":
+
+    - "syslogd2":
+
+
+wireless-controller_setting:
+    darrp-optimize-schedules: "default-darrp-optimize"
+
+wireless-controller_arrp-profile:
+    - "arrp-default":
+
+
+wireless-controller_wids-profile:
+    - "default":
+        comment: "Default WIDS profile."
+        ap-scan: enable
+        wireless-bridge: enable
+        deauth-broadcast: enable
+        null-ssid-probe-resp: enable
+        long-duration-attack: enable
+        invalid-mac-oui: enable
+        weak-wep-iv: enable
+        auth-frame-flood: enable
+        assoc-frame-flood: enable
+        spoofed-deauth: enable
+        asleap-attack: enable
+        eapol-start-flood: enable
+        eapol-logoff-flood: enable
+        eapol-succ-flood: enable
+        eapol-fail-flood: enable
+        eapol-pre-succ-flood: enable
+        eapol-pre-fail-flood: enable
+
+    - "default-wids-apscan-enabled":
+        ap-scan: enable
+
+
+wireless-controller_ble-profile:
+    - "fortiap-discovery":
+        advertising: [ibeacon, eddystone-uid, eddystone-url]
+        ibeacon-uuid: "wtp-uuid"
+
+
+router_rip:
+    redistribute_connected:
+
+    redistribute_static:
+
+    redistribute_ospf:
+
+    redistribute_bgp:
+
+    redistribute_isis:
+
+
+router_ripng:
+    redistribute_connected:
+
+    redistribute_static:
+
+    redistribute_ospf:
+
+    redistribute_bgp:
+
+    redistribute_isis:
+
+
+router_static:
+    - "1":
+        gateway: 172.16.10.2
+        device: "vl-alfa1"
+
+    - "2":
+        dst: [192.168.10.0, 255.255.255.0]
+        gateway: 10.10.10.5
+        priority: 20
+        device: "ds-01-link.910"
+
+    - "3":
+        dst: [192.168.10.0, 255.255.255.0]
+        gateway: 10.9.10.6
+        device: "ds-02-link.910"
+
+
+router_ospf:
+    redistribute_connected:
+
+    redistribute_static:
+
+    redistribute_rip:
+
+    redistribute_bgp:
+
+    redistribute_isis:
+
+
+router_ospf6:
+    redistribute_connected:
+
+    redistribute_static:
+
+    redistribute_rip:
+
+    redistribute_bgp:
+
+    redistribute_isis:
+
+
+router_bgp:
+    redistribute_connected:
+
+    redistribute_rip:
+
+    redistribute_ospf:
+
+    redistribute_static:
+
+    redistribute_isis:
+
+    redistribute6_connected:
+
+    redistribute6_rip:
+
+    redistribute6_ospf:
+
+    redistribute6_static:
+
+    redistribute6_isis:
+
+
+router_isis:
+    redistribute_connected:
+
+    redistribute_rip:
+
+    redistribute_ospf:
+
+    redistribute_bgp:
+
+    redistribute_static:
+
+    redistribute6_connected:
+
+    redistribute6_rip:
+
+    redistribute6_ospf:
+
+    redistribute6_bgp:
+
+    redistribute6_static:
+
+
+router_multicast:
+

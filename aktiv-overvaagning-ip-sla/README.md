@@ -408,14 +408,13 @@ Trafikken vender helt automatisk og transparent tilbage til den primære højhas
 ### Konfiguration på R1 (TCP Port 80 Check):
 ```cisco
 ip sla 20
- tcp-connect 172.16.1.1 80 source-interface GigabitEthernet0/1
+ tcp-connect 172.16.1.1 80 source-ip 10.1.12.1
  frequency 5
  timeout 2000
  threshold 2000
 exit
 ip sla schedule 20 life forever start-time now
 ```
-
 ### Testscenarie:
 På R4 deaktiveres HTTP-tjenesten:
 ```cisco

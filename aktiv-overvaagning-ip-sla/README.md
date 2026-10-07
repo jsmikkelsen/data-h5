@@ -409,12 +409,13 @@ Trafikken vender helt automatisk og transparent tilbage til den primære højhas
 ```cisco
 ip sla 20
  tcp-connect 172.16.1.1 80 source-ip 10.1.12.1
- frequency 5
- timeout 2000
  threshold 2000
+ timeout 2000
+ frequency 5
 exit
 ip sla schedule 20 life forever start-time now
 ```
+*(Bemærk: I Cisco IOS valideres parametrene i realtid mod reglen `Frequency >= Timeout >= Threshold`. Da standard-timeout for TCP er 60 sekunder, skal `threshold` og `timeout` sættes ned før `frequency 5` kan accepteres).*
 ### Testscenarie:
 På R4 deaktiveres HTTP-tjenesten:
 ```cisco

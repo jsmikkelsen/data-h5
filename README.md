@@ -47,5 +47,6 @@ Projektet omfatter etablering af en fuldt redundant, segmenteret og overvåget h
 ---
 
 ## 📁 Øvrige Mapper og Værktøjer
+*   **[`aktiv-overvaagning-ip-sla/`](./aktiv-overvaagning-ip-sla/):** Dagsopgave – Aktiv overvågning med Cisco IP SLA, Enhanced Object Tracking og automatisk floating static route failover/recovery.
 *   **`case/`:** De originale opgavebeskrivelser for Del 1, Del 2 og Del 3 samt backup af fysiske configs (`ds-01.txt`, `ds-02.txt`, `ms-01.txt`, FortiGate configs).
 *   **`proxmox-deploy/`:** Ansible playbooks og Cloud-Init scripts til automatiseret udrulning af VM'er og LXC containere i Proxmox.

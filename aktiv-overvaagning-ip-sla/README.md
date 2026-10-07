@@ -36,41 +36,74 @@ Ved at kombinere **Cisco IP SLA (Service Level Agreement)** og **Enhanced Object
 
 ## Del 1 – Topologi & IP-adresseringsplan
 
-### Netværkstopologi
+### Netværkstopologi (GNS3 / Lab Miljø)
 
 ```text
                      [ R2 ] (Primær transit)
                    .12.2    .24.2
-                  /              \
-       .12.1     /                \    .24.4
-[ Klient / LAN ] --- [ R1 ]              [ R4 / Test Server ] (Loopback0: 172.16.1.1/32)
-192.168.10.50  .10.1 \                /    .34.4
-       .13.1     \                / 
-                  \              /
-                   .13.3    .34.3
-                     [ R3 ] (Backup transit)
+             Gi0/1 /            \ Gi0/0
+                  /              \ 
+       .12.1     /                \ ens4 .24.4
+[ Client (Linux) ] --- [ R1 ]              [ Server (Linux) ] (lo: 172.16.1.1/32)
+ens4: 192.168.10.50   Gi0/0   Gi0/2 \            / ens5 .34.4
+                               \          /
+                         .13.1  \        / Gi0/0
+                           Gi0/2 \      /
+                                 [ R3 ] (Backup transit)
+                               .13.3    .34.3
 ```
 
-- **R1:** Virksomhedens edge-router / default gateway.
-- **R2:** Primær upstream-forbindelse.
-- **R3:** Sekundær upstream-forbindelse (backup).
-- **R4:** Ekstern destination / server med Loopback0 (`172.16.1.1/32`) og integreret HTTP-server.
+- **Client:** Linux klient-maskine (`ens4`: `192.168.10.50/24`, Gateway: `192.168.10.1`).
+- **R1:** Cisco edge-router / default gateway.
+- **R2:** Primær upstream transit-router.
+- **R3:** Sekundær upstream transit-router (backup).
+- **Server:** Dual-homed Linux server (`ens4` mod R2, `ens5` mod R3) med loopback IP `172.16.1.1/32` som ekstern test-destination og integreret Python HTTP webserver.
 
 ### IP-adresseringsplan
 
-| Enhed | Interface | IP-adresse | Prefix / Maske | Beskrivelse |
-| :--- | :--- | :--- | :--- | :--- |
-| **Klient (PC1)** | eth0 | `192.168.10.50` | `/24` (`255.255.255.0`) | Gateway: `192.168.10.1` |
-| **R1** | Gi0/0 | `192.168.10.1` | `/24` (`255.255.255.0`) | LAN Gateway |
-| **R1** | Gi0/1 | `10.1.12.1` | `/30` (`255.255.255.252`) | Mod R2 (Primær sti) |
-| **R1** | Gi0/2 | `10.1.13.1` | `/30` (`255.255.255.252`) | Mod R3 (Backup sti) |
-| **R2** | Gi0/1 | `10.1.12.2` | `/30` (`255.255.255.252`) | Mod R1 |
-| **R2** | Gi0/0 | `10.1.24.2` | `/30` (`255.255.255.252`) | Mod R4 |
-| **R3** | Gi0/2 | `10.1.13.3` | `/30` (`255.255.255.252`) | Mod R1 |
-| **R3** | Gi0/0 | `10.1.34.3` | `/30` (`255.255.255.252`) | Mod R4 |
-| **R4 / Server** | Gi0/0 | `10.1.24.4` | `/30` (`255.255.255.252`) | Mod R2 |
-| **R4 / Server** | Gi0/1 | `10.1.34.4` | `/30` (`255.255.255.252`) | Mod R3 |
-| **R4 / Server** | Loopback0 | `172.16.1.1` | `/32` (`255.255.255.255`) | Ekstern test-destination |
+| Enhed | Interface | IP-adresse | Prefix / Maske | Forbundet mod | Beskrivelse |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Client (Linux)** | `ens4` | `192.168.10.50` | `/24` (`255.255.255.0`) | R1 `Gi0/0` | Klient / LAN (Gateway: `192.168.10.1`) |
+| **R1** | `Gi0/0` | `192.168.10.1` | `/24` (`255.255.255.0`) | Client `ens4` | LAN Gateway |
+| **R1** | `Gi0/1` | `10.1.12.1` | `/30` (`255.255.255.252`) | R2 `Gi0/1` | Mod R2 (Primær sti) |
+| **R1** | `Gi0/2` | `10.1.13.1` | `/30` (`255.255.255.252`) | R3 `Gi0/2` | Mod R3 (Backup sti) |
+| **R2** | `Gi0/1` | `10.1.12.2` | `/30` (`255.255.255.252`) | R1 `Gi0/1` | Mod R1 |
+| **R2** | `Gi0/0` | `10.1.24.2` | `/30` (`255.255.255.252`) | Server `ens4` | Mod Server (Primær vej) |
+| **R3** | `Gi0/2` | `10.1.13.3` | `/30` (`255.255.255.252`) | R1 `Gi0/2` | Mod R1 |
+| **R3** | `Gi0/0` | `10.1.34.3` | `/30` (`255.255.255.252`) | Server `ens5` | Mod Server (Backup vej) |
+| **Server (Linux)** | `ens4` | `10.1.24.4` | `/30` (`255.255.255.252`) | R2 `Gi0/0` | Mod R2 (Primær vej) |
+| **Server (Linux)** | `ens5` | `10.1.34.4` | `/30` (`255.255.255.252`) | R3 `Gi0/0` | Mod R3 (Backup vej) |
+| **Server (Linux)** | `lo` | `172.16.1.1` | `/32` (`255.255.255.255`) | Lokal loopback | Ekstern test-destination & webserver |
+
+### Linux Node Opsætning
+
+#### Client Setup (Kommandoer):
+```bash
+sudo ip addr flush dev ens4
+sudo ip addr add 192.168.10.50/24 dev ens4
+sudo ip link set ens4 up
+sudo ip route add default via 192.168.10.1 dev ens4
+```
+
+#### Server Setup (Kommandoer):
+```bash
+# Interfaces:
+sudo ip addr add 10.1.24.4/30 dev ens4 && sudo ip link set ens4 up
+sudo ip addr add 10.1.34.4/30 dev ens5 && sudo ip link set ens5 up
+sudo ip addr add 172.16.1.1/32 dev lo
+
+# Routing mod LAN: Primær via R2 (metric 100), Backup via R3 (metric 200):
+sudo ip route add 192.168.10.0/24 via 10.1.24.2 dev ens4 metric 100
+sudo ip route append 192.168.10.0/24 via 10.1.34.3 dev ens5 metric 200
+
+# Deaktiver strict reverse path filtering for asymmetrisk svar:
+sudo sysctl -w net.ipv4.conf.all.rp_filter=0
+sudo sysctl -w net.ipv4.conf.ens4.rp_filter=0
+sudo sysctl -w net.ipv4.conf.ens5.rp_filter=0
+
+# Start HTTP webserver til Del 11:
+python3 -m http.server 80 &
+```
 
 ---
 
@@ -467,9 +500,11 @@ Med Cisco IP SLA kan man benytte `ip sla reaction-configuration` til at udløse 
 +-------------------------------------------------------------+
 ```
 
-### Komplette Router Konfigurationsfiler
-De fuldstændige Cisco IOS konfigurationer er placeret i mappen `konfigurationer/`:
-- [R1.cfg](./konfigurationer/R1.cfg) (Edge Router med IP SLA, Tracking og Floating Route)
-- [R2.cfg](./konfigurationer/R2.cfg) (Primær Transit Router)
-- [R3.cfg](./konfigurationer/R3.cfg) (Backup Transit Router)
-- [R4_server.cfg](./konfigurationer/R4_server.cfg) (Ekstern Destination & HTTP Server)
+### Komplette Konfigurationsfiler og Scripts
+De fuldstændige konfigurationer og scripts er placeret i mappen `konfigurationer/`:
+- **[R1.cfg](./konfigurationer/R1.cfg)** (Cisco Edge Router med IP SLA 10/20, Object Tracking og Floating Route)
+- **[R2.cfg](./konfigurationer/R2.cfg)** (Cisco Primær Transit Router)
+- **[R3.cfg](./konfigurationer/R3.cfg)** (Cisco Backup Transit Router)
+- **[server_linux.sh](./konfigurationer/server_linux.sh)** (Linux Server: dual-homed `ens4`/`ens5`, `lo: 172.16.1.1`, rp_filter fix & HTTP server)
+- **[client_linux.sh](./konfigurationer/client_linux.sh)** (Linux Client: `ens4` IP og default gateway)
+- **[R4_server.cfg](./konfigurationer/R4_server.cfg)** (Alternativ Cisco IOS konfiguration hvis serveren i stedet bygges som Cisco router)

@@ -210,9 +210,9 @@ ip route 172.16.1.1 255.255.255.255 10.1.12.2
 ! 2. Opret IP SLA operation 10:
 ip sla 10
  icmp-echo 172.16.1.1 source-interface GigabitEthernet0/1
- frequency 5
- timeout 2000
  threshold 2000
+ timeout 2000
+ frequency 5
 exit
 
 ! 3. Start overvågningen:

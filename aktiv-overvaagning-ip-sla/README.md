@@ -40,17 +40,17 @@ Ved at kombinere **Cisco IP SLA (Service Level Agreement)** og **Enhanced Object
 
 ```text
                      [ R2 ] (Primær transit)
-                   .12.2    .24.2
+                   .12.2    .24.1
              Gi0/1 /            \ Gi0/0
                   /              \ 
-       .12.1     /                \ ens4 .24.4
+       .12.1     /                \ ens4 .24.2
 [ Client (Linux) ] --- [ R1 ]              [ Server (Linux) ] (lo: 172.16.1.1/32)
-ens4: 192.168.10.50   Gi0/0   Gi0/2 \            / ens5 .34.4
+ens4: 192.168.10.50   Gi0/0   Gi0/2 \            / ens5 .34.2
                                \          /
                          .13.1  \        / Gi0/0
                            Gi0/2 \      /
                                  [ R3 ] (Backup transit)
-                               .13.3    .34.3
+                               .13.2    .34.1
 ```
 
 - **Client:** Linux klient-maskine (`ens4`: `192.168.10.50/24`, Gateway: `192.168.10.1`).
@@ -68,11 +68,11 @@ ens4: 192.168.10.50   Gi0/0   Gi0/2 \            / ens5 .34.4
 | **R1** | `Gi0/1` | `10.1.12.1` | `/30` (`255.255.255.252`) | R2 `Gi0/1` | Mod R2 (Primær sti) |
 | **R1** | `Gi0/2` | `10.1.13.1` | `/30` (`255.255.255.252`) | R3 `Gi0/2` | Mod R3 (Backup sti) |
 | **R2** | `Gi0/1` | `10.1.12.2` | `/30` (`255.255.255.252`) | R1 `Gi0/1` | Mod R1 |
-| **R2** | `Gi0/0` | `10.1.24.2` | `/30` (`255.255.255.252`) | Server `ens4` | Mod Server (Primær vej) |
-| **R3** | `Gi0/2` | `10.1.13.3` | `/30` (`255.255.255.252`) | R1 `Gi0/2` | Mod R1 |
-| **R3** | `Gi0/0` | `10.1.34.3` | `/30` (`255.255.255.252`) | Server `ens5` | Mod Server (Backup vej) |
-| **Server (Linux)** | `ens4` | `10.1.24.4` | `/30` (`255.255.255.252`) | R2 `Gi0/0` | Mod R2 (Primær vej) |
-| **Server (Linux)** | `ens5` | `10.1.34.4` | `/30` (`255.255.255.252`) | R3 `Gi0/0` | Mod R3 (Backup vej) |
+| **R2** | `Gi0/0` | `10.1.24.1` | `/30` (`255.255.255.252`) | Server `ens4` | Mod Server (Primær vej) |
+| **R3** | `Gi0/2` | `10.1.13.2` | `/30` (`255.255.255.252`) | R1 `Gi0/2` | Mod R1 |
+| **R3** | `Gi0/0` | `10.1.34.1` | `/30` (`255.255.255.252`) | Server `ens5` | Mod Server (Backup vej) |
+| **Server (Linux)** | `ens4` | `10.1.24.2` | `/30` (`255.255.255.252`) | R2 `Gi0/0` | Mod R2 (Primær vej) |
+| **Server (Linux)** | `ens5` | `10.1.34.2` | `/30` (`255.255.255.252`) | R3 `Gi0/0` | Mod R3 (Backup vej) |
 | **Server (Linux)** | `lo` | `172.16.1.1` | `/32` (`255.255.255.255`) | Lokal loopback | Ekstern test-destination & webserver |
 
 ### Linux Node Opsætning
@@ -88,13 +88,13 @@ sudo ip route add default via 192.168.10.1 dev ens4
 #### Server Setup (Kommandoer):
 ```bash
 # Interfaces:
-sudo ip addr add 10.1.24.4/30 dev ens4 && sudo ip link set ens4 up
-sudo ip addr add 10.1.34.4/30 dev ens5 && sudo ip link set ens5 up
+sudo ip addr add 10.1.24.2/30 dev ens4 && sudo ip link set ens4 up
+sudo ip addr add 10.1.34.2/30 dev ens5 && sudo ip link set ens5 up
 sudo ip addr add 172.16.1.1/32 dev lo
 
 # Routing mod LAN: Primær via R2 (metric 100), Backup via R3 (metric 200):
-sudo ip route add 192.168.10.0/24 via 10.1.24.2 dev ens4 metric 100
-sudo ip route append 192.168.10.0/24 via 10.1.34.3 dev ens5 metric 200
+sudo ip route add 192.168.10.0/24 via 10.1.24.1 dev ens4 metric 100
+sudo ip route append 192.168.10.0/24 via 10.1.34.1 dev ens5 metric 200
 
 # Deaktiver strict reverse path filtering for asymmetrisk svar:
 sudo sysctl -w net.ipv4.conf.all.rp_filter=0
@@ -117,7 +117,7 @@ Den primære rute peger på R2 med standard Administrative Distance (AD 1). Back
 ip route 0.0.0.0 0.0.0.0 10.1.12.2
 
 ! Backup rute via R3 (AD = 200):
-ip route 0.0.0.0 0.0.0.0 10.1.13.3 200
+ip route 0.0.0.0 0.0.0.0 10.1.13.2 200
 ```
 
 ### Verifikation af routingtabel under normal drift:
@@ -151,9 +151,9 @@ R1(config-if)# shutdown
 %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet0/1, changed state to down
 
 R1# show ip route static
-Gateway of last resort is 10.1.13.3 to network 0.0.0.0
+Gateway of last resort is 10.1.13.2 to network 0.0.0.0
 
-S*    0.0.0.0/0 [200/0] via 10.1.13.3
+S*    0.0.0.0/0 [200/0] via 10.1.13.2
 ```
 Da linket går fysisk ned, trækker routerens Routing Information Base (RIB) automatisk ruten via 10.1.12.2 ud. Backup-ruten [200/0] installeres øjeblikkeligt. Ping genetableres efter 1-2 tabte pakker.
 
@@ -315,7 +315,7 @@ no ip route 0.0.0.0 0.0.0.0 10.1.12.2
 ip route 0.0.0.0 0.0.0.0 10.1.12.2 track 10
 
 ! Sikr at backup-ruten er til stede med AD 200:
-ip route 0.0.0.0 0.0.0.0 10.1.13.3 200
+ip route 0.0.0.0 0.0.0.0 10.1.13.2 200
 ```
 
 ### Routingtabel under normal drift:
@@ -331,7 +331,7 @@ S*    0.0.0.0/0 [1/0] via 10.1.12.2
 ## Del 9 – Test af Automatisk Failover
 
 1. Klienten pinger kontinuerligt: `ping 172.16.1.1 -t`.
-2. På R2 lukkes interfacet mod R4:
+2. På R2 lukkes interfacet mod Serveren:
    ```cisco
    R2(config)# interface GigabitEthernet0/0
    R2(config-if)# shutdown
@@ -352,9 +352,9 @@ S*    0.0.0.0/0 [1/0] via 10.1.12.2
 ### Verifikation af routingtabellen under failover:
 ```cisco
 R1# show ip route static
-Gateway of last resort is 10.1.13.3 to network 0.0.0.0
+Gateway of last resort is 10.1.13.2 to network 0.0.0.0
 
-S*    0.0.0.0/0 [200/0] via 10.1.13.3
+S*    0.0.0.0/0 [200/0] via 10.1.13.2
 ```
 
 **Resultat:** Klientens pingtab begrænses til ca. 2-3 pakker under transitionen, hvorefter trafikken flyder fejlfrit igennem backup-routeren R3!
@@ -380,7 +380,7 @@ S*    0.0.0.0/0 [200/0] via 10.1.13.3
    ↓
 4. Den primære rute via 10.1.12.2 (AD 1) genindsættes
    ↓
-5. Backup-ruten via 10.1.13.3 (AD 200) fortrænges til standby
+5. Backup-ruten via 10.1.13.2 (AD 200) fortrænges til standby
 ```
 
 ### Verifikation:
@@ -489,7 +489,7 @@ Med Cisco IP SLA kan man benytte `ip sla reaction-configuration` til at udløse 
 +-------------------------------------------------------------+
 |                      ROUTINGTABEL                           |
 |  ip route 0.0.0.0 0.0.0.0 10.1.12.2 track 10               |
-|  ip route 0.0.0.0 0.0.0.0 10.1.13.3 200                    |
+|  ip route 0.0.0.0 0.0.0.0 10.1.13.2 200                    |
 +-------------------------------------------------------------+
                               │
                               ▼
